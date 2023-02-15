@@ -107,7 +107,7 @@ if __name__ == '__main__':
         #Solve max KL first
         Dmat = Q
         Dvec = np.transpose(vT)
-        obj_fn = (list(z_DV.values()) @ Dmat @ list(z_DV.values())) + (Dvec @ list(z_DV.values()) )
+        obj_fn = (list(z_DV.values()) @ Dmat @ list(z_DV.values())) + (Dvec @ list(z_DV.values()))
         qm.set_objective("max", obj_fn)
         qm.parameters.optimalitytarget.set(2)
         qm.solve()
