@@ -147,7 +147,7 @@ def perform_wb(n = 20):
     # calculate row mean from cov matrix
     iw_mean = np.mean(iw, axis=0)
     #math.floor(iw_mean.shape[0] * .25)
-    print(n, PSD_Random)
+    #print(n, PSD_Random)
     return vals_from_priors(iw, iw_mean, math.floor(n * .25))
 
 #https://stackoverflow.com/questions/16266720/find-out-if-matrix-is-positive-definite-with-numpy

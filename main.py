@@ -186,6 +186,8 @@ if __name__ == '__main__':
         qm.solve()
         qm.print_solution()
         print(np.linalg.eig(Dmat))
+    elif mode == 3:
+        print("running SGD")
 
 
 
