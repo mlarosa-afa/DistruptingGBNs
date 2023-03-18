@@ -25,7 +25,9 @@ if __name__ == '__main__':
         print("Caluclated weight 2 as ", U_2)
         num_evidence = int(input("Number of Evidence Variables: "))
 
-        b_concave, b_convex, Phi_opt1, Phi_opt2, v, evidence_vars, observed_vals = whitebox_preprocessing(MVG_Sigma,
+        MVG_Mu = np.mean(MVG_Sigma, axis=0)
+
+        b_concave, b_convex, Phi_opt1, Phi_opt2, v, evidence_vars, observed_vals, unobserved_vars = whitebox_preprocessing(MVG_Sigma,
                                                                                                           NUM_EVIDENCE_VARS=num_evidence, seed = 12)
         print("The interesting range of weight 1 ranges from ", b_concave, " to ", b_convex)
 
@@ -33,9 +35,11 @@ if __name__ == '__main__':
         idx = {1: {1: [1] * num_evidence}}
         z_DV = qm.continuous_var_matrix(1, num_evidence, name="Z_DV", lb=-3, ub=3)  # DV for decision variable
 
-        with open("Pareto_Front.tsv", "w+") as f:
-            f.write("u_1\tu_2\tz_1\tz_2\tz_3\tObj\tϕ_1\tϕ_2\tEigenvaluesofDMat\n")
-            for i in np.arange(0.0, 1.0, 0.01):
+        with open("WBTable.tsv", "w+") as f:
+            f.write("u_1\tu_2\tz_1\tz_2\tz_3\tObj\tϕ_1\tϕ_2\n")
+            iter = np.concatenate((np.arange(0.0, 1.0, 0.01), np.arange(b_concave, b_convex, 0.001)))
+            iter.sort()
+            for i in iter:
                 U_1 = i
                 U_2 = 1-i
                 # Solve normalized problem
@@ -47,17 +51,22 @@ if __name__ == '__main__':
                 obj_fn = (list(z_DV.values()) @ Dmat @ list(z_DV.values())) + (Dvec @ list(z_DV.values()))
                 qm.set_objective("max", obj_fn)
 
-                eig = np.linalg.eigvals(Dmat)
-
                 qm.parameters.optimalitytarget.set(3)
                 #qm.parameters.optimalitytarget.set(2)
 
                 solutionset = qm.solve()
-                #z = np.array([qm.solution["Z_DV_0_0"], qm.solution["Z_DV_0_1"], qm.solution["Z_DV_0_2"]])
-                #phi_1 = z @ Dmat @ z
-                #phi_2 = Dvec @ z
+                #qm.print_solution()
+                z = np.array([qm.solution["Z_DV_0_0"], qm.solution["Z_DV_0_1"], qm.solution["Z_DV_0_2"]])
 
-                #f.write("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (U_1, U_2, qm.solution["Z_DV_0_0"], qm.solution["Z_DV_0_1"], qm.solution["Z_DV_0_2"], qm.objective_value, phi_1, phi_2, eig[0],eig[1],eig[2]))
+                Sigma_zz = np.delete(MVG_Sigma, unobserved_vars, 1)
+                Sigma_zz = np.delete(Sigma_zz, unobserved_vars, 0)
+
+                MVG_Mu_z = np.delete(MVG_Mu, unobserved_vars)
+
+                phi_1 = np.transpose(z) @ v.Q @ z + np.transpose(v.vT) @ z
+                phi_2 = (-1 * np.transpose(z) @ np.linalg.inv(Sigma_zz) @ z) + (2 * np.transpose(z) @ np.linalg.inv(Sigma_zz)@ MVG_Mu_z)
+
+                f.write("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (U_1, U_2, qm.solution["Z_DV_0_0"], qm.solution["Z_DV_0_1"], qm.solution["Z_DV_0_2"], qm.objective_value, phi_1, phi_2))
 
     elif mode == 2:
         numDim = 7  # int(input("Enter number of Dimentions: "))

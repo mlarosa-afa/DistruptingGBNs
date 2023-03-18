@@ -170,7 +170,7 @@ def whitebox_preprocessing(MVG_Sigma=np.array([]), n=20, NUM_EVIDENCE_VARS = 0, 
     Zeta = np.sort(np.linalg.eigvals(v.L.zz))
 
     b_concave, b_convex = identify_convavity(rho, Phi_opt1, Zeta, Phi_opt2, len(evidence_vars))
-    return b_concave, b_convex, Phi_opt1, Phi_opt2, v, evidence_vars, observed_vals
+    return b_concave, b_convex, Phi_opt1, Phi_opt2, v, evidence_vars, observed_vals, unobserved_vars
 
 #SDG Methodss
 def check_gd_bounds(constraint, curr_pos, step):
