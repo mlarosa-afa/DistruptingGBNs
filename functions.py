@@ -8,12 +8,12 @@ from docplex.mp.model import Model
 class Lambda:
     def __init__(self, Lambda_dot, evidence_vars, unobserved_vars):
         self.yy = np.delete(Lambda_dot, evidence_vars, 1)
-        self.yy = np.delete(self.yy, evidence_vars, 0)
+        self.yy = np.delete(yy, evidence_vars, 0)
         self.yz = np.delete(Lambda_dot, unobserved_vars, 1)
-        self.yz = np.delete(self.yz, evidence_vars, 0)
-        self.zy = np.transpose(self.yz)
+        self.yz = np.delete(yz, evidence_vars, 0)
+        self.zy = np.transpose(yz)
         self.zz = np.delete(Lambda_dot, unobserved_vars, 1)
-        self.zz = np.delete(self.zz, unobserved_vars, 0)
+        self.zz = np.delete(zz, unobserved_vars, 0)
 
 class nonstandardVars:
     def __init__(self, Q, vT, c, K,h,g, K_prime,h_prime,u_prime, S_prime, L):
@@ -21,10 +21,7 @@ class nonstandardVars:
 
 #Generates a Positive Definate square matrix of dimention num_dim.
 #There may be room for optimization here
-def generate_pos_def_matrix(num_dim, seed = 0):
-    if not seed == 0:
-        random.seed(seed)
-
+def generate_pos_def_matrix(num_dim):
     #runs until matrix is Pos_def
     while True:
         # https://math.stackexchange.com/questions/332456/how-to-make-a-matrix-positive-semidefinite
@@ -42,7 +39,11 @@ def is_pos_def(x):
 #Calculate the optimal (max) weights (phi_1 & phi_2)
 def  solve_optimal_weights(Q, vT, c, K_prime, u_prime, NUM_EVIDENCE_VARS):
     qm = Model('DistruptionGBN')
+    idx = {1: {1: [1] * NUM_EVIDENCE_VARS}}
     z_DV = qm.continuous_var_matrix(1, NUM_EVIDENCE_VARS, name="Z_DV", lb=-3, ub=3)  # DV for decision variable
+
+    Dmat = np.zeros((NUM_EVIDENCE_VARS, NUM_EVIDENCE_VARS))
+    Dvec = np.zeros(NUM_EVIDENCE_VARS)
 
     # Solve max KL first
     Dmat = Q
@@ -68,16 +69,8 @@ def  solve_optimal_weights(Q, vT, c, K_prime, u_prime, NUM_EVIDENCE_VARS):
 #Optional Parameters:
 # Number of evidence variables to select. Will default to 25% of variables
 # evidence variables. list of rows. Will overwrite num of evidence vars if available
-def generate_evidence(MVG_Sigma, MVG_Mu, evidence_vars=[], NUM_EVIDENCE_VARS = 0, seed=3):
-    # If the number of evidence variables is not provided, make it 25% of the variables
-    if NUM_EVIDENCE_VARS == 0:
-        if not len(evidence_vars) == 0:
-            NUM_EVIDENCE_VARS = len(evidence_vars)
-        else:
-            NUM_EVIDENCE_VARS = math.floor(MVG_Mu.size * .25)
+def generate_evidence(MVG_Sigma, MVG_Mu, evidence_vars=[], NUM_EVIDENCE_VARS = 0):
 
-
-    random.seed(seed)
     # Generate Random evidence if none provided
     if len(evidence_vars) == 0:
         evidence_vars = random.sample(range(MVG_Mu.shape[0]), NUM_EVIDENCE_VARS)
@@ -86,15 +79,12 @@ def generate_evidence(MVG_Sigma, MVG_Mu, evidence_vars=[], NUM_EVIDENCE_VARS = 0
     unobserved_vars = list(set(list(range(MVG_Mu.size))) - set(evidence_vars))
 
     # Generates a new observed valued centered on MVG_Mu with sd of MVG_Sigma
-    np.random.seed(seed)
-    observed_vals = list()
-    for j in evidence_vars:
-        observed_vals.append(np.random.normal(MVG_Mu[j], MVG_Sigma[j, j], 1)[0])
+
 
     return evidence_vars, unobserved_vars, observed_vals
 
 
-def params_from_sample(MVG_Sigma, MVG_Mu, evidence_vars, unobserved_vars, observed_vals):
+def vals_from_priors(MVG_Sigma, MVG_Mu, evidence_vars, unobserved_vars, observed_vals):
 
     # Is this inverse required?
     Lambda_dot = np.linalg.inv(MVG_Sigma)  #Precision matrix of joint evidence distribution
@@ -136,8 +126,8 @@ def identify_convavity(rho, Phi_1_opt, Zeta, Phi_2_opt, NUM_EVIDENCE_VARS):
     #identify best constraints
     b_concave = np.inf
     b_convex = -np.inf
-    for rho_index in range(1, len(rho)+1):
-        for zeta_index in range(1, len(Zeta)+1):
+    for rho_index in range(1,len(rho)+1):
+        for zeta_index in range(1,len(Zeta)+1):
             const = ((Zeta[zeta_index-1] / Phi_2_opt) / ((rho[rho_index-1] / Phi_1_opt) + (Zeta[zeta_index-1] / Phi_2_opt)))
             if rho_index + zeta_index - 1 <= NUM_EVIDENCE_VARS:
                 if const < b_concave:
@@ -150,17 +140,24 @@ def identify_convavity(rho, Phi_1_opt, Zeta, Phi_2_opt, NUM_EVIDENCE_VARS):
 
 #Identifys concavity given a prior
 #If no prior is passed, a random PD matrix of dim n is created
-def whitebox_preprocessing(MVG_Sigma=np.array([]), n=20, NUM_EVIDENCE_VARS = 0, seed = 3):
+def whitebox_preprocessing(prior=np.array([]), n=20, NUM_EVIDENCE_VARS = 0):
 
     #checks to see if prior is passed. If not, generate a PD matrix as prior
-    if MVG_Sigma.size == 0:
-        MVG_Sigma = generate_pos_def_matrix(n)
+    if prior.size == 0:
+        prior = generate_pos_def_matrix(n)
+
+    #Obtain invwishart from prior
+    # Using default size=1, random_state=None
+    iw = invwishart.rvs(df=len(prior), scale=prior)
+
+    #Is this inverse required?
+    iw = np.linalg.inv(iw)
 
     # calculate row mean from cov matrix
-    MVG_Mu = np.mean(MVG_Sigma, axis=0)
+    iw_mean = np.mean(iw, axis=0)
 
-    evidence_vars, unobserved_vars, observed_vals = generate_evidence(MVG_Sigma, MVG_Mu, NUM_EVIDENCE_VARS = NUM_EVIDENCE_VARS, seed = seed)
-    v = params_from_sample(MVG_Sigma, MVG_Mu, evidence_vars, unobserved_vars, observed_vals)
+    evidence_vars, unobserved_vars, observed_vals = generate_evidence(iw, iw_mean, NUM_EVIDENCE_VARS)
+    v = vals_from_priors(iw, iw_mean, evidence_vars, unobserved_vars, observed_vals)
 
     Phi_opt1, Phi_opt2 = solve_optimal_weights(v.Q, v.vT, v.c, v.K_prime, v.u_prime, len(evidence_vars))
 
@@ -168,46 +165,4 @@ def whitebox_preprocessing(MVG_Sigma=np.array([]), n=20, NUM_EVIDENCE_VARS = 0, 
     Zeta = np.sort(np.linalg.eigvals(v.L.zz))
 
     b_concave, b_convex = identify_convavity(rho, Phi_opt1, Zeta, Phi_opt2, len(evidence_vars))
-    return b_concave, b_convex, Phi_opt1, Phi_opt2, v, evidence_vars, observed_vals, unobserved_vars
-
-#SDG Methodss
-def check_gd_bounds(constraint, curr_pos, step):
-    next_step = curr_pos + step
-    #if(sum(constraint(curr_pos + step)) == len(curr_pos)):
-    #    return curr_pos + step
-    if next_step[0] > 3:
-        next_step[0] = 3
-    if next_step[1] > 3:
-        next_step[1] = 3
-    if next_step[2] > 3:
-        next_step[2] = 3
-    if next_step[3] > 3:
-        next_step[3] = 3
-    if next_step[0] < -3:
-        next_step[0] = -3
-    if next_step[1] < -3:
-        next_step[1] = -3
-    if next_step[2] < -3:
-        next_step[2] = -3
-    if next_step[3] < -3:
-        next_step[3] = -3
-
-    return next_step
-
-def adaGrad(gradient, constraint, curr_pos, learn_rate=0.001, v = 0):
-    step = (learn_rate / math.sqrt(v + (.00001))) * gradient(curr_pos)
-    v_t_1 = v + pow(np.linalg.norm(gradient(curr_pos)), 2)
-    return check_gd_bounds(constraint, curr_pos, step), v_t_1
-
-def RMSProp(gradient, constraint, curr_pos, learn_rate= 0.001, v = 0, beta = .9):
-    step = ((learn_rate / math.sqrt(v + (.00001))) * gradient(curr_pos))
-    v_t_1 = (beta * v) + ((1-beta) * pow(np.linalg.norm(gradient(curr_pos)), 2))
-    return check_gd_bounds(constraint, curr_pos, step), v_t_1
-
-def adam(gradient, constraint, curr_pos, learn_rate= 0.001, t = 0, v = 0, m = 0, beta_1 = .9, beta_2 = .999):
-    m_t_1 = (beta_1 * m) + ((1 - beta_1) * gradient(curr_pos))
-    v_t_1 = (beta_1 * v) + ((1 - beta_2) * pow(np.linalg.norm(gradient(curr_pos)), 2))
-    m_t_1_hat = m_t_1 / (1 - pow(beta_1, t))
-    v_t_1_hat = v_t_1 / (1 - pow(beta_2, t))
-    step = (learn_rate / (np.sqrt(v_t_1_hat) + .00001)) * m_t_1_hat
-    return check_gd_bounds(constraint, curr_pos, step), v_t_1, m_t_1
+    return b_concave, b_convex, Phi_opt1, Phi_opt2, v, evidence_vars, observed_vals

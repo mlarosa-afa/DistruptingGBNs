@@ -1,6 +1,8 @@
 import numpy as np
 from functions import *
-from scipy.stats import invwishart, multivariate_normal
+
+from whitebox_attack import whitebox_attack
+from gb_SAA import gb_SAA
 
 MVG_Sigma = np.array([[5633137202, 3953563504, 5696545030, 5908408469, 3132652814, 4685958540, 7125401077, 2482538832, 4870543242, 3045394255, 4394534262, 3094643611, 2464755361, 3137883995, 970932982],
 [3953563504, 2783169882, 3999281027, 4143483396, 2206383839, 3289192094, 5009204007, 1744846049, 3425662374, 2145399315, 3089934638, 2177248225, 1732910795, 2211766588, 689762418],
@@ -25,99 +27,42 @@ if mode == 1:
     U_1 = float(input("Enter U_1: "))
     U_2 = 1 - U_1
     print("Caluclated weight 2 as ", U_2)
-    num_evidence = int(input("Number of Evidence Variables: "))
+    ev_vars = input("Enter column of Evidence Variables seperated by commas: ").split(",")
+    ev_vars = [eval(i) for i in ev_vars]
 
-    b_concave, b_convex, Phi_opt1, Phi_opt2, v, evidence_vars, observed_vals, unobserved_vars = whitebox_preprocessing(
-        MVG_Sigma,
-        NUM_EVIDENCE_VARS=num_evidence, seed=12)
-    print("The interesting range of weight 1 ranges from ", b_concave, " to ", b_convex)
-
-    qm = Model('DistruptionGBN')
-    z_DV = qm.continuous_var_matrix(1, num_evidence, name="Z_DV", lb=-3, ub=3)  # DV for decision variable
-
-    # Solve normalized problem
-    W_1 = U_1 / Phi_opt1
-    W_2 = U_2 / Phi_opt2
-
-    Dmat = (W_1 * v.Q) - (W_2 * v.K_prime)
-    Dvec = W_1 * np.transpose(v.vT) + 2 * W_2 * np.matmul(v.K_prime, v.u_prime)
-    obj_fn = (list(z_DV.values()) @ Dmat @ list(z_DV.values())) + (Dvec @ list(z_DV.values()))
-    qm.set_objective("max", obj_fn)
-
-    qm.parameters.optimalitytarget.set(3)
-    # qm.parameters.optimalitytarget.set(2)
-
-    solutionset = qm.solve()
-    qm.print_solution()
-    """
-    #Create a list of all solution vars
-    sol_param_names = []
-    for i in range(0, num_evidence):
-        sol_param_names.append("Z_DV_0_" + str(i))
-    
-    z = []
-    for var_name in sol_param_names:
-        z.append(qm.solution[var_name])
-    z = np.array(z)
-
-    Sigma_zz = np.delete(MVG_Sigma, unobserved_vars, 1)
-    Sigma_zz = np.delete(Sigma_zz, unobserved_vars, 0)
-
-    MVG_Mu_z = np.delete(MVG_mu, unobserved_vars)
-
-    phi_1 = np.transpose(z) @ v.Q @ z + np.transpose(v.vT) @ z
-    phi_2 = (-1 * np.transpose(z) @ np.linalg.inv(Sigma_zz) @ z) + (
-                2 * np.transpose(z) @ np.linalg.inv(Sigma_zz) @ MVG_Mu_z)
-
-    print("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (
-    U_1, U_2, qm.solution["Z_DV_0_0"], qm.solution["Z_DV_0_1"], qm.solution["Z_DV_0_2"], qm.objective_value,
-    phi_1, phi_2))
-    """
+    whitebox_attack(MVG_Sigma, MVG_mu, ev_vars, U_1, U_2)
 
 elif mode == 2:
+    Psi = MVG_Sigma
+    mu_not = MVG_mu
+    KAPPA = 4
     numSamples = int(input("Enter number of Samples: "))
     numDf = int(input("Enter degrees of freedom: "))
 
-    W_1 = float(input("Enter U 1: "))
-    W_2 = 1 - W_1
-    NUM_EVIDENCE_VARS = int(input("Enter Number of Observered Variables: "))
+    U_1 = float(input("Enter U 1: "))
+    U_2 = 1 - U_1
+    ev_vars = input("Enter column of Evidence Variables seperated by commas: ").split(",")
+    ev_vars = [eval(i) for i in ev_vars]
 
-    invWishart = invwishart.rvs(df=numDf, scale=MVG_Sigma, size=numSamples)
+    cov_samples = invwishart.rvs(df=numDf, scale=Psi, size=numSamples)
 
-    # Q, vT, c, K_prime, u_prime
-    parameters = []
+    mu_samples = []
+    for cov_samp in cov_samples:
+        mu_samples.append(np.random.normal(mu_not, (1/KAPPA) * cov_samp, 1)[0]))
 
-    for sample_Sigma in invWishart:
-        sample_Mu = multivariate_normal.rvs(cov=sample_Sigma)
-        evidence_vars, unobserved_vars, observed_vals = generate_evidence(sample_Sigma, sample_Mu,
-                                                                          NUM_EVIDENCE_VARS=NUM_EVIDENCE_VARS, seed=3)
-        vals = params_from_sample(sample_Sigma, sample_Mu, evidence_vars, unobserved_vars, observed_vals)
-        parameters.append((vals.Q, vals.vT, vals.c, vals.K_prime, vals.u_prime))
+    gb_SAA(cov_samples, mu_samples)
 
-    Dmat = np.zeros((NUM_EVIDENCE_VARS, NUM_EVIDENCE_VARS))
-    Dvec = np.zeros(NUM_EVIDENCE_VARS)
 
-    for set in parameters:
-        Dmat = Dmat + ((W_1 * set[0]) - (W_2 * set[3]))
-        Dvec = W_1 * np.transpose(set[1]) + 2 * W_2 * np.matmul(set[3], set[4])
 
-    qm = Model('DistruptionGBN')
-    z_DV = qm.continuous_var_matrix(1, NUM_EVIDENCE_VARS, name="Z_DV", lb=-10000, ub=10000)  # DV for decision variable
+    gb_SAA(MVG_Sigma, MVG_mu, ev_vars, numDf, numSamples, U_1, U_2)
 
-    # Add objective function
-    obj_fn = (list(z_DV.values()) @ Dmat @ list(z_DV.values())) + (Dvec @ list(z_DV.values()))
-    qm.set_objective("max", obj_fn)
-
-    qm.parameters.optimalitytarget.set(2)
-    qm.solve()
-    qm.print_solution()
 elif mode == 3:
 
     numDf = int(input("Enter degrees of freedom: "))
-
-    W_1 = float(input("Enter U 1: "))
-    W_2 = 1 - W_1
-    NUM_EVIDENCE_VARS = int(input("Enter Number of observered Variables: "))
+    U_1 = float(input("Enter U 1: "))
+    U_2 = 1 - U_1
+    ev_vars = input("Enter column of Evidence Variables seperated by commas: ").split(",")
+    ev_vars = [eval(i) for i in ev_vars]
 
     evidence_vars, unobserved_vars, observed_vals = generate_evidence(MVG_Sigma,  multivariate_normal.rvs(cov=MVG_Sigma), NUM_EVIDENCE_VARS=NUM_EVIDENCE_VARS, seed = 19)
 
