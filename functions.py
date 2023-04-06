@@ -146,8 +146,6 @@ def identify_convavity(rho, Phi_1_opt, Zeta, Phi_2_opt, NUM_EVIDENCE_VARS):
                 if const > b_convex:
                     b_convex = const
 
-    print(rho, Zeta)
-
     return b_concave, b_convex
 
 #Identifys concavity given a prior
@@ -183,12 +181,16 @@ def check_gd_bounds(constraint, curr_pos, step):
         next_step[1] = 3
     if next_step[2] > 3:
         next_step[2] = 3
+    if next_step[3] > 3:
+        next_step[3] = 3
     if next_step[0] < -3:
         next_step[0] = -3
     if next_step[1] < -3:
         next_step[1] = -3
     if next_step[2] < -3:
         next_step[2] = -3
+    if next_step[3] < -3:
+        next_step[3] = -3
 
     return next_step
 
