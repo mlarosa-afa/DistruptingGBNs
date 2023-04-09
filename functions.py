@@ -81,7 +81,7 @@ def generate_evidence(MVG_Sigma, MVG_Mu, evidence_vars=[], NUM_EVIDENCE_VARS = 0
     # Generates a new observed valued centered on MVG_Mu with sd of MVG_Sigma
 
 
-    return evidence_vars, unobserved_vars, observed_vals
+    return evidence_vars, unobserved_vars
 
 
 def vals_from_priors(MVG_Sigma, MVG_Mu, evidence_vars, unobserved_vars, observed_vals):

@@ -3,34 +3,36 @@ import numpy as np
 from scipy.stats import invwishart, multivariate_normal
 from functions import *
 
-def gb_SAA(sample_cov, sample_mean, U_1, U_2, seed=12):
-    unobserved_vars = list(set(list(range(Psi.size))) - set(evidence_vars))
+def gb_SAA(cov_samples, mu_samples, ev_cols, evidence, U_1, U_2, seed=12):
+    unob_cols = list(set(list(range(len(cov_samples[1][0])))) - set(ev_cols))
 
     # Q, vT, c, K_prime, u_prime
     parameters = []
 
-    for sample_Sigma in sample_cov:
+    for i in range(len(cov_samples)):
 
-
-        evidence_vars = generate_evidence(sample_Sigma, sample_Mu, NUM_EVIDENCE_VARS=len(evidence_vars), seed=3)
-
-        vals = params_from_sample(sample_Sigma, sample_Mu, evidence_vars, unobserved_vars, observed_vals)
+        vals = vals_from_priors(cov_samples[i], mu_samples[i], ev_cols, unob_cols, evidence)
         parameters.append((vals.Q, vals.vT, vals.c, vals.K_prime, vals.u_prime))
 
-    Dmat = np.zeros((len(evidence_vars), len(evidence_vars)))
-    Dvec = np.zeros(len(evidence_vars))
+    Dmat = np.zeros((len(ev_cols), len(ev_cols)))
+    Dvec = np.zeros(len(ev_cols))
 
     for set in parameters:
         Dmat = Dmat + ((U_1 * set[0]) - (U_2 * set[3]))
         Dvec = U_1 * np.transpose(set[1]) + 2 * U_2 * np.matmul(set[3], set[4])
 
+    Dmat = Dmat / len(cov_samples)
+    Dvec = Dvec / len(cov_samples)
+
     qm = Model('DistruptionGBN')
-    z_DV = qm.continuous_var_matrix(1, len(evidence_vars), name="Z_DV", lb=-10000, ub=10000)  # DV for decision variable
+    z_DV = qm.continuous_var_matrix(1, len(ev_cols), name="Z_DV", lb=-10000, ub=10000)  # DV for decision variable
 
     # Add objective function
     obj_fn = (list(z_DV.values()) @ Dmat @ list(z_DV.values())) + (Dvec @ list(z_DV.values()))
     qm.set_objective("max", obj_fn)
 
-    qm.parameters.optimalitytarget.set(2)
+    #This can be improved by including concavity into the decision
+    qm.parameters.optimalitytarget.set(3)
+
     qm.solve()
     qm.print_solution()

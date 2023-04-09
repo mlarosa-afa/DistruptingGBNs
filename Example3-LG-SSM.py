@@ -2,6 +2,7 @@ import numpy as np
 from scipy.stats import invgamma, norm, invwishart, multivariate_normal
 import functions
 from docplex.mp.model import Model
+from gb_SAA import gb_SAA
 
 #FIX check_bounds (multimodes to handle certain amount off position) - Based on true value
 #add SAA
@@ -10,8 +11,7 @@ from docplex.mp.model import Model
 #add SDG on Zillow (only)
 
 np.random.seed(100)
-def LGSSM_Generate(epsilon_var=None, delta_var=None, mu_state_init=None, var_state_init=None):
-    T = 1
+def LGSSM_Generate(T, epsilon_var=None, delta_var=None, mu_state_init=None, var_state_init=None):
     if epsilon_var is None:
         epsilon_var = invgamma.rvs(1, loc = 0, scale = 1, size = 4) #[1, 1,0.5,0.5] #Error st dev for transtition model - SAMPLE FOR PROBLEM GB
     if delta_var is None:
@@ -85,67 +85,22 @@ def LGSSM_Generate(epsilon_var=None, delta_var=None, mu_state_init=None, var_sta
 
     return Sigma, mu
 
-
-W_1 = float(input("Enter U 1: "))
-W_2 = 1 - W_1
-
-evidence_vars = [4,5,10,11]
-unobserved_vars = [0,1,2,3,6,7,8,9]
-observed_vals = [0,0,1,1]
-
-print("Please select a method:\n\t1.AdaGrad\n\t2.RMSProp\n\t3.Adam")
-method = int(input("Method:"))
-LEARN_RATE = float(input("Learning Rate: "))
-
-print("Z_1_t, Z_2_t, Z_1_t+1, Z_2_t+1")
-#input vector of sensor obs
-solution = np.array([0, 0, 0, 0])
-prev_solution = np.array([10000, 10000, 10000, 10000])
-v = 0
-t = 1
-m = 0
-
-#number of iters
-mode = int(input("mode: "))
-if mode == 1:
-
-    vals = functions.params_from_sample(sample_cov, sample_Mu, evidence_vars, unobserved_vars, observed_vals)
-    Dmat = ((W_1 * vals.Q) - (W_2 * vals.K_prime))
-    Dvec = W_1 * np.transpose(vals.vT) + 2 * W_2 * np.matmul(vals.K_prime, vals.u_prime)
-
-    qm = Model('DistruptionGBN')
-    z_DV = qm.continuous_var_matrix(1, 4, name="Z_DV", lb=-3, ub=3)  # DV for decision variable
-
-    # Solve normalized problem
-    W_1 = U_1 / Phi_opt1
-    W_2 = U_2 / Phi_opt2
-
-    Dmat = (W_1 * v.Q) - (W_2 * v.K_prime)
-    Dvec = W_1 * np.transpose(v.vT) + 2 * W_2 * np.matmul(v.K_prime, v.u_prime)
-    obj_fn = (list(z_DV.values()) @ Dmat @ list(z_DV.values())) + (Dvec @ list(z_DV.values()))
-    qm.set_objective("max", obj_fn)
-
-    qm.parameters.optimalitytarget.set(3)
-    # qm.parameters.optimalitytarget.set(2)
-
-    solutionset = qm.solve()
-    qm.print_solution()
+mode = int(input("1) Whitebox Attack\n2) Graybox - Sample Average Approximation\n3) Graybox - Stocastic Gradient Descent\nSelected Mode: "))
 
 if mode == 2:
-    while abs(np.linalg.norm(solution-prev_solution)) > .001:
-        sample_cov, sample_Mu = LGSSM_Generate()
 
-        vals = functions.params_from_sample(sample_cov, sample_Mu, evidence_vars, unobserved_vars, observed_vals)
-        Dmat = ((W_1 * vals.Q) - (W_2 * vals.K_prime))
-        Dvec = W_1 * np.transpose(vals.vT) + 2 * W_2 * np.matmul(vals.K_prime, vals.u_prime)
-        prev_solution = solution
+    U_1 = float(input("Enter U 1: "))
+    U_2 = 1 - U_1
+    numSamples = int(input("Enter number of Samples: "))
 
-        if method == 1:
-            solution, v = functions.adaGrad(lambda z: (Dmat + Dmat.transpose()) @ z + (Dvec), lambda z: z <= 3, solution, LEARN_RATE, v = v)
-        elif method == 2:
-            solution, v = functions.RMSProp(lambda z: (Dmat + Dmat.transpose()) @ z + (Dvec), lambda z: z <= 3, solution, LEARN_RATE, v=v)
-        elif method == 3:
-            solution, v, m = functions.adam(lambda z: (Dmat + Dmat.transpose()) @ z + (Dvec), lambda z: z <= 3, solution, learn_rate=LEARN_RATE, t = t, v = v, m = m)
-            t = t + 1
-        print(solution)
+    ev_vars = [4, 5, 10, 11]  # multiples of 6 starting with 4 and 5 (zero indexed)
+    evidence = [0, 0, 1, 1]  # mess with these
 
+    cov_samples = []
+    mu_samples = []
+    for i in range(len(numSamples)):
+        cov_sample, mu_sample = LGSSM_Generate(2)
+        cov_samples.append(cov_sample)
+        mu_samples.appned(mu_sample)
+
+    gb_SAA(cov_samples, mu_samples, ev_vars, evidence, U_1, U_2)

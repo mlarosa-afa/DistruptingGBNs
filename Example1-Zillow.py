@@ -36,21 +36,20 @@ elif mode == 2:
     Psi = MVG_Sigma
     mu_not = MVG_mu
     KAPPA = 4
-    numSamples = int(input("Enter number of Samples: "))
-    numDf = int(input("Enter degrees of freedom: "))
+    nu = len(mu_not)
 
     U_1 = float(input("Enter U 1: "))
     U_2 = 1 - U_1
-    ev_vars = input("Enter column of Evidence Variables seperated by commas: ").split(",")
-    ev_vars = [eval(i) for i in ev_vars]
+    numSamples = int(input("Enter number of Samples: "))
+    ev_vars = [0,1,2,3,5,6,8,10,11,12,14]
 
-    cov_samples = invwishart.rvs(df=numDf, scale=Psi, size=numSamples)
+    cov_samples = invwishart.rvs(df=nu, scale=Psi, size=numSamples)
 
     mu_samples = []
-    for cov_samp in cov_samples:
-        mu_samples.append(np.random.normal(mu_not, (1/KAPPA) * cov_samp, 1)[0]))
-
-    gb_SAA(cov_samples, mu_samples)
+    for cov_sample in cov_samples:
+        mu_samples.append(np.random.multivariate_normal(mu_not, (1/KAPPA) * cov_sample))
+    evidence = [145885, 121453, 134413, 137732, 94179, 153126, 83859, 76678, 67944, 85680, 53759]
+    gb_SAA(cov_samples, mu_samples, ev_vars, evidence, U_1, U_2)
 
 
 
