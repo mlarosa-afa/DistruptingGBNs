@@ -3,6 +3,7 @@ from scipy.stats import invgamma, norm, invwishart, multivariate_normal
 import functions
 from docplex.mp.model import Model
 from gb_SAA import gb_SAA
+from wb_attack import whitebox_attack
 
 #FIX check_bounds (multimodes to handle certain amount off position) - Based on true value
 #add SAA
@@ -11,7 +12,8 @@ from gb_SAA import gb_SAA
 #add SDG on Zillow (only)
 
 np.random.seed(100)
-def LGSSM_Generate(T, epsilon_var=None, delta_var=None, mu_state_init=None, var_state_init=None):
+def LGSSM_Generate(T, epsilon_var=None, delta_var=None, mu_state_init=None, var_state_init=None, seed=23):
+    np.random.seed(seed)
     if epsilon_var is None:
         epsilon_var = invgamma.rvs(1, loc = 0, scale = 1, size = 4) #[1, 1,0.5,0.5] #Error st dev for transtition model - SAMPLE FOR PROBLEM GB
     if delta_var is None:
@@ -85,8 +87,18 @@ def LGSSM_Generate(T, epsilon_var=None, delta_var=None, mu_state_init=None, var_
 
     return Sigma, mu
 
-mode = int(input("1) Whitebox Attack\n2) Graybox - Sample Average Approximation\n3) Graybox - Stocastic Gradient Descent\nSelected Mode: "))
+mode = int(input("1) Whitebox Attack\n2) Graybox - Sample Average Approximation\nSelected Mode: "))
+if mode == 1:
+    U_1 = float(input("Enter U_1: "))
+    U_2 = 1 - U_1
+    print("Caluclated weight 2 as ", U_2)
+    T = int(input("Enter number of time setps: "))
+    MVG_Sigma, MVG_mu = LGSSM_Generate(T)
+    ev_vars = [4, 5, 10, 11]
+    evidence = [0, 0, 1, 1]
 
+    b_concave, b_convex, solutionset, qm = whitebox_attack(MVG_Sigma, MVG_mu, ev_vars, evidence, U_1, U_2)
+    print("The interesting range of weight 1 ranges from ", b_concave, " to ", b_convex)
 if mode == 2:
 
     U_1 = float(input("Enter U 1: "))

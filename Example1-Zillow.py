@@ -1,8 +1,9 @@
 import numpy as np
 from functions import *
 
-from whitebox_attack import whitebox_attack
+from wb_attack import whitebox_attack
 from gb_SAA import gb_SAA
+from gb_SGD import gb_SGD
 
 MVG_Sigma = np.array([[5633137202, 3953563504, 5696545030, 5908408469, 3132652814, 4685958540, 7125401077, 2482538832, 4870543242, 3045394255, 4394534262, 3094643611, 2464755361, 3137883995, 970932982],
 [3953563504, 2783169882, 3999281027, 4143483396, 2206383839, 3289192094, 5009204007, 1744846049, 3425662374, 2145399315, 3089934638, 2177248225, 1732910795, 2211766588, 689762418],
@@ -27,10 +28,11 @@ if mode == 1:
     U_1 = float(input("Enter U_1: "))
     U_2 = 1 - U_1
     print("Caluclated weight 2 as ", U_2)
-    ev_vars = input("Enter column of Evidence Variables seperated by commas: ").split(",")
-    ev_vars = [eval(i) for i in ev_vars]
+    ev_vars = []
+    evidence = []
 
-    whitebox_attack(MVG_Sigma, MVG_mu, ev_vars, U_1, U_2)
+    b_concave, b_convex, solutionset, qm = whitebox_attack(MVG_Sigma, MVG_mu, ev_vars, evidence, U_1, U_2)
+    print("The interesting range of weight 1 ranges from ", b_concave, " to ", b_convex)
 
 elif mode == 2:
     Psi = MVG_Sigma
@@ -40,56 +42,36 @@ elif mode == 2:
 
     U_1 = float(input("Enter U 1: "))
     U_2 = 1 - U_1
+    print("Caluclated weight 2 as ", U_2)
     numSamples = int(input("Enter number of Samples: "))
     ev_vars = [0,1,2,3,5,6,8,10,11,12,14]
+    evidence = [145885, 121453, 134413, 137732, 94179, 153126, 83859, 76678, 67944, 85680, 53759]
+    ev_bounds = np.concatenate([x + 15000 for x in evidence], [x - 15000 for x in evidence])
 
     cov_samples = invwishart.rvs(df=nu, scale=Psi, size=numSamples)
 
     mu_samples = []
     for cov_sample in cov_samples:
         mu_samples.append(np.random.multivariate_normal(mu_not, (1/KAPPA) * cov_sample))
-    evidence = [145885, 121453, 134413, 137732, 94179, 153126, 83859, 76678, 67944, 85680, 53759]
-    gb_SAA(cov_samples, mu_samples, ev_vars, evidence, U_1, U_2)
 
-
-
-    gb_SAA(MVG_Sigma, MVG_mu, ev_vars, numDf, numSamples, U_1, U_2)
+    gb_SAA(cov_samples, mu_samples, ev_vars, evidence, U_1, U_2, ev_bounds=ev_bounds)
 
 elif mode == 3:
-
-    numDf = int(input("Enter degrees of freedom: "))
     U_1 = float(input("Enter U 1: "))
     U_2 = 1 - U_1
-    ev_vars = input("Enter column of Evidence Variables seperated by commas: ").split(",")
-    ev_vars = [eval(i) for i in ev_vars]
+    print("Caluclated weight 2 as ", U_2)
+    numDf = int(input("Enter degrees of freedom: "))
 
-    evidence_vars, unobserved_vars, observed_vals = generate_evidence(MVG_Sigma,  multivariate_normal.rvs(cov=MVG_Sigma), NUM_EVIDENCE_VARS=NUM_EVIDENCE_VARS, seed = 19)
+    ev_vars = [0, 1, 2, 3, 5, 6, 8, 10, 11, 12, 14]
+    evidence = [145885, 121453, 134413, 137732, 94179, 153126, 83859, 76678, 67944, 85680, 53759]
 
     print("Please select a method:\n\t1.AdaGrad\n\t2.RMSProp\n\t3.Adam")
-    method = int(input("method:"))
+    method = int(input("method: "))
     LEARN_RATE = float(input("Learning Rate: "))
 
-    position = np.array([0, 0, 0])
-    prev_position = np.array([10000, 10000, 10000])
-    v = 0
-    t = 1
-    m = 0
+    solution = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    prev_solution = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    ev_bounds = np.concatenate([x + 15000 for x in evidence], [x - 15000 for x in evidence])
 
-    #number of iters
-
-    while abs(np.linalg.norm(position-prev_position)) > .0001:
-        sample_cov = invwishart.rvs(df=numDf, scale=MVG_Sigma)
-        sample_Mu = multivariate_normal.rvs(cov=sample_cov)
-
-        vals = params_from_sample(sample_cov, sample_Mu, evidence_vars, unobserved_vars, observed_vals)
-        Dmat = ((W_1 * vals.Q) - (W_2 * vals.K_prime))
-        Dvec = W_1 * np.transpose(vals.vT) + 2 * W_2 * np.matmul(vals.K_prime, vals.u_prime)
-        prev_position = position
-        if method == 1:
-            position, v = adaGrad(lambda z: (Dmat + Dmat.transpose()) @ z + (Dvec), lambda z: z <= 3, position, LEARN_RATE, v = v)
-        elif method == 2:
-            position, v = RMSProp(lambda z: (Dmat + Dmat.transpose()) @ z + (Dvec), lambda z: z <= 3, position, LEARN_RATE, v=v)
-        elif method == 3:
-            position, v, m = adam(lambda z: (Dmat + Dmat.transpose()) @ z + (Dvec), lambda z: z <= 3, position, LEARN_RATE, t = t, v = v, m = m)
-            t = t + 1
-        print(position)
+    solution = gb_SGD(MVG_Sigma, MVG_mu, ev_vars, evidence, method, U_1, U_2, LEARN_RATE)
+    print(solution)
