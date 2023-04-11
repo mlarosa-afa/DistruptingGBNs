@@ -28,23 +28,24 @@ if mode == 1:
     Sigma = MVG_Sigma_evidence
     mu = MVG_mu_evidence
 
-    mu.append(mu_not_beta[0] + np.dot(mu_not_beta[1:], mu))
+    mu = np.append(mu, mu_not_beta[0] + np.dot(mu_not_beta[1:], mu))
 
     new_row_sigma = np.array([])
     for j in range(len(mu_not_beta[1:])):
-        new_row_sigma.append(np.dot(mu_not_beta[1:], Sigma[j,]))
+        new_row_sigma = np.append(new_row_sigma, np.dot(mu_not_beta[1:], Sigma[j,]))
 
     Sigma = np.append(Sigma, new_row_sigma[None].T, axis=1)
-    new_row_sigma.append(0)
+    new_row_sigma = np.append(new_row_sigma, 0)
     Sigma = np.r_[Sigma, [new_row_sigma]]
     alpha = 4
-    Sigma[8, 8] = invgamma.rvs(alpha, loc=0, scale=1) + mu_not_beta[1:] @ Sigma @ mu_not_beta[1:]
+    Sigma[7, 7] = invgamma.rvs(alpha, loc=0, scale=1) + mu_not_beta[1:] @ MVG_Sigma_evidence @ mu_not_beta[1:]
 
     ev_vars = [7]
     evidence = [6.5647]
 
-    whitebox_attack(Sigma, mu, ev_vars, U_1, U_2)
-
+    b_concave, b_convex, solution_set, obj_value = whitebox_attack(Sigma, mu, ev_vars, evidence, U_1, U_2)
+    print("The interesting range of weight 1 ranges from ", b_concave, " to ", b_convex)
+    print(solution_set)
 elif mode == 2:
     U_1 = float(input("Enter U 1: "))
     U_2 = 1 - U_1
@@ -80,17 +81,17 @@ elif mode == 2:
 
         beta_sample = beta_samples[i]
 
-        mu.append(beta_sample[0] + np.dot(beta_sample[1:], mu))
+        mu = np.append(mu, beta_sample[0] + np.dot(beta_sample[1:], mu))
 
         new_row_sigma = np.array([])
         for j in range(len(beta_sample[1:])):
-            new_row_sigma.append(np.dot(beta_sample[1:],Sigma[j,]))
+            new_row_sigma = np.append(new_row_sigma, np.dot(beta_sample[1:],Sigma[j,]))
 
         Sigma = np.append(Sigma, new_row_sigma[None].T, axis=1)
-        new_row_sigma.append(0)
+        new_row_sigma = np.append(new_row_sigma, 0)
         Sigma = np.r_[Sigma, [new_row_sigma]]
 
-        Sigma[8,8] = errorVar_samples[i] + beta_sample[1:] @ Sigma @ beta_sample[1:]
+        Sigma[7,7] = errorVar_samples[i] + beta_sample[1:] @ cov_samples_evidence[i] @ beta_sample[1:]
 
         joint_cov.append(Sigma)
         joint_mu.append(mu)
@@ -98,4 +99,5 @@ elif mode == 2:
     ev_vars = [7]
     evidence = [6.5647]
 
-    gb_SAA(cov_samples_evidence, mu_samples_evidence, ev_vars, evidence, U_1, U_2)
+    solution = gb_SAA(joint_cov, joint_mu, ev_vars, evidence, U_1, U_2)
+    print(solution)

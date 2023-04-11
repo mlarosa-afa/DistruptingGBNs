@@ -27,7 +27,7 @@ def generate_pos_def_matrix(num_dim):
         # https://math.stackexchange.com/questions/332456/how-to-make-a-matrix-positive-semidefinite
         random_matrix = np.random.rand(num_dim, num_dim)
         PSD_Random = np.dot(random_matrix, random_matrix.transpose())
-        # check to see if PD, if so, continnue
+        # check to see if PD, if so, continue
         if is_pos_def(PSD_Random):
             break
     return PSD_Random
@@ -37,30 +37,27 @@ def is_pos_def(x):
     return np.all(np.linalg.eigvals(x) > 0)
 
 #Calculate the optimal (max) weights (phi_1 & phi_2)
-def  solve_optimal_weights(Q, vT, K_prime, u_prime, NUM_EVIDENCE_VARS):
+def  solve_optimal_weights(Q, vT, K_prime, u_prime, NUM_EVIDENCE_VARS, ev_bounds):
     # Solve max KL first
     Dmat = Q
     Dvec = np.transpose(vT)
-    bestKL, solution = solveqm(Dmat, Dvec, NUM_EVIDENCE_VARS)
+    bestKL, solution = solveqm(Dmat, Dvec, NUM_EVIDENCE_VARS, ev_bounds=ev_bounds)
 
     # Solve marginal mode second
     Dmat = -1 * (K_prime)
     Dvec = 2 * np.matmul(K_prime, u_prime)
-    bestMM, solution = solveqm(Dmat, Dvec, NUM_EVIDENCE_VARS)
+    bestMM, solution = solveqm(Dmat, Dvec, NUM_EVIDENCE_VARS, ev_bounds=ev_bounds)
 
     return bestKL, bestMM
 
-def solveqm(Dmat, Dvec, NUM_EVIDENCE, optimality_target = 3, ev_bounds = None, lb = -10000, ub=10000):
+def solveqm(Dmat, Dvec, NUM_EVIDENCE, ev_bounds = None, optimality_target = 3):
     qm = Model('DistruptionGBN')
-    if ev_bounds is not None:
-        if (not len(ev_bounds[0]) == NUM_EVIDENCE) or (not len(ev_bounds[1]) == NUM_EVIDENCE):
-            raise Exception("Number of Evidence variable passed does not mount Evidence bounds")
-        #change to dictonary of cont_vars to edit upper/lower bounds
-        z_DV = {}
-        for i in range(NUM_EVIDENCE):
-            z_DV[i] = qm.continuous_var(name="Z_DV_" + str(i), ub=ev_bounds[0][i], lb=ev_bounds[1][i])  # DV for decision variable
-
-    z_DV = qm.continuous_var_matrix(1, len(NUM_EVIDENCE), name="Z_DV", lb=lb, ub=ub)  # DV for decision variable
+    if (not len(ev_bounds[0]) == NUM_EVIDENCE) or (not len(ev_bounds[1]) == NUM_EVIDENCE):
+        raise Exception("Number of Evidence variable passed does not mount Evidence bounds")
+    #change to dictonary of cont_vars to edit upper/lower bounds
+    z_DV = {}
+    for i in range(NUM_EVIDENCE):
+        z_DV[i] = qm.continuous_var(name="Z_DV_" + str(i), ub=ev_bounds[0][i], lb=ev_bounds[1][i])  # DV for decision variable
 
     # Add objective function
     obj_fn = (list(z_DV.values()) @ Dmat @ list(z_DV.values())) + (Dvec @ list(z_DV.values()))
@@ -68,10 +65,7 @@ def solveqm(Dmat, Dvec, NUM_EVIDENCE, optimality_target = 3, ev_bounds = None, l
 
     # This can be improved by including concavity into the decision
     qm.parameters.optimalitytarget.set(optimality_target)
-
     solutionset = qm.solve()
-    qm.print_solution()
-
     return qm.objective_value, solutionset
 
 
@@ -81,7 +75,7 @@ def solveqm(Dmat, Dvec, NUM_EVIDENCE, optimality_target = 3, ev_bounds = None, l
 # evidence variables. list of rows. Will overwrite num of evidence vars if available
 
 def vals_from_priors(MVG_Sigma, MVG_Mu, evidence_vars, evidence):
-    unobserved_vars = list(set(list(range(len(MVG_Sigma[1][0])))) - set(evidence_vars))
+    unobserved_vars = list(set(list(range(len(MVG_Sigma[1])))) - set(evidence_vars))
     # Is this inverse required?
     Lambda_dot = np.linalg.inv(MVG_Sigma)  #Precision matrix of joint evidence distribution
     eta_dot = np.matmul(Lambda_dot, MVG_Mu)

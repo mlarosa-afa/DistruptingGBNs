@@ -5,12 +5,6 @@ from docplex.mp.model import Model
 from gb_SAA import gb_SAA
 from wb_attack import whitebox_attack
 
-#FIX check_bounds (multimodes to handle certain amount off position) - Based on true value
-#add SAA
-#remove random evidence
-#Add WB
-#add SDG on Zillow (only)
-
 np.random.seed(100)
 def LGSSM_Generate(T, epsilon_var=None, delta_var=None, mu_state_init=None, var_state_init=None, seed=23):
     np.random.seed(seed)
@@ -92,13 +86,16 @@ if mode == 1:
     U_1 = float(input("Enter U_1: "))
     U_2 = 1 - U_1
     print("Caluclated weight 2 as ", U_2)
-    T = int(input("Enter number of time setps: "))
+    T = int(input("Enter number of time steps: "))
     MVG_Sigma, MVG_mu = LGSSM_Generate(T)
     ev_vars = [4, 5, 10, 11]
     evidence = [0, 0, 1, 1]
 
     b_concave, b_convex, solutionset, qm = whitebox_attack(MVG_Sigma, MVG_mu, ev_vars, evidence, U_1, U_2)
     print("The interesting range of weight 1 ranges from ", b_concave, " to ", b_convex)
+    print("Solutions that do not appear are zero.")
+    print(solutionset)
+
 if mode == 2:
 
     U_1 = float(input("Enter U 1: "))
@@ -110,9 +107,11 @@ if mode == 2:
 
     cov_samples = []
     mu_samples = []
-    for i in range(len(numSamples)):
+    for i in range(numSamples):
         cov_sample, mu_sample = LGSSM_Generate(2)
         cov_samples.append(cov_sample)
-        mu_samples.appned(mu_sample)
+        mu_samples.append(mu_sample)
 
-    gb_SAA(cov_samples, mu_samples, ev_vars, evidence, U_1, U_2)
+    solution = gb_SAA(cov_samples, mu_samples, ev_vars, evidence, U_1, U_2)
+    print("Solutions that do not appear are zero.")
+    print(solution)

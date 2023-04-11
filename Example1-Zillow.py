@@ -21,18 +21,19 @@ MVG_Sigma = np.array([[5633137202, 3953563504, 5696545030, 5908408469, 313265281
 [3137883995, 2211766588, 3175278071, 3287203831, 1754020442, 2611555071, 3974699158, 1388357810, 2721277711, 1703267750, 2455424782, 1730731240, 1379573393, 1761195683, 552448585],
 [970932982, 689762418, 981144822, 1005445941, 543784447, 804710858, 1232386457, 434157814, 852577113, 533457599, 762385154, 543195591, 438156985, 552448585, 207220820]])
 
-MVG_mu = np.array([332823.81,243985.67,261218.56,363589.74,182822.20,244082.36,244082.36,429786.78,167151.77,239382.75,182175.97,237685.32,177700.86,179807.45,184921.32,89241.46])
+MVG_mu = np.array([332823.81,243985.67,261218.56,363589.74,182822.20,244082.36,429786.78,167151.77,239382.75,182175.97,237685.32,177700.86,179807.45,184921.32,89241.46])
 
 mode = int(input("1) Whitebox Attack\n2) Graybox - Sample Average Approximation\n3) Graybox - Stocastic Gradient Descent\nSelected Mode: "))
 if mode == 1:
     U_1 = float(input("Enter U_1: "))
     U_2 = 1 - U_1
     print("Caluclated weight 2 as ", U_2)
-    ev_vars = []
-    evidence = []
+    ev_vars = [0, 1, 2, 3, 5, 6, 8, 10, 11, 12, 14]
+    evidence = [145885, 121453, 134413, 137732, 94179, 153126, 83859, 76678, 67944, 85680, 53759]
 
-    b_concave, b_convex, solutionset, qm = whitebox_attack(MVG_Sigma, MVG_mu, ev_vars, evidence, U_1, U_2)
+    b_concave, b_convex, solutionset, obj_value = whitebox_attack(MVG_Sigma, MVG_mu, ev_vars, evidence, U_1, U_2)
     print("The interesting range of weight 1 ranges from ", b_concave, " to ", b_convex)
+    print(solutionset)
 
 elif mode == 2:
     Psi = MVG_Sigma
@@ -46,7 +47,9 @@ elif mode == 2:
     numSamples = int(input("Enter number of Samples: "))
     ev_vars = [0,1,2,3,5,6,8,10,11,12,14]
     evidence = [145885, 121453, 134413, 137732, 94179, 153126, 83859, 76678, 67944, 85680, 53759]
-    ev_bounds = np.concatenate([x + 15000 for x in evidence], [x - 15000 for x in evidence])
+    upper_bounds = [x + 15000 for x in evidence]
+    lower_bounds = [x - 15000 for x in evidence]
+    ev_bounds = np.stack((upper_bounds, lower_bounds))
 
     cov_samples = invwishart.rvs(df=nu, scale=Psi, size=numSamples)
 
@@ -54,13 +57,14 @@ elif mode == 2:
     for cov_sample in cov_samples:
         mu_samples.append(np.random.multivariate_normal(mu_not, (1/KAPPA) * cov_sample))
 
-    gb_SAA(cov_samples, mu_samples, ev_vars, evidence, U_1, U_2, ev_bounds=ev_bounds)
+    solution = gb_SAA(cov_samples, mu_samples, ev_vars, evidence, U_1, U_2, ev_bounds=ev_bounds)
+    print(solution)
 
 elif mode == 3:
     U_1 = float(input("Enter U 1: "))
     U_2 = 1 - U_1
     print("Caluclated weight 2 as ", U_2)
-    numDf = int(input("Enter degrees of freedom: "))
+    nu = int(input("Enter degrees of freedom: "))
 
     ev_vars = [0, 1, 2, 3, 5, 6, 8, 10, 11, 12, 14]
     evidence = [145885, 121453, 134413, 137732, 94179, 153126, 83859, 76678, 67944, 85680, 53759]
@@ -70,8 +74,19 @@ elif mode == 3:
     LEARN_RATE = float(input("Learning Rate: "))
 
     solution = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-    prev_solution = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-    ev_bounds = np.concatenate([x + 15000 for x in evidence], [x - 15000 for x in evidence])
+    prev_solution = np.array([float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf')])
+    ev_bounds = np.stack(([x + 15000 for x in evidence], [x - 15000 for x in evidence]))
 
-    solution = gb_SGD(MVG_Sigma, MVG_mu, ev_vars, evidence, method, U_1, U_2, LEARN_RATE)
-    print(solution)
+    phi_opt1, solution = gb_SGD(solution, prev_solution, MVG_Sigma, MVG_mu, ev_vars, evidence, method, 1, 0, ev_bounds, LEARN_RATE=LEARN_RATE, nu=nu)
+
+    solution = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    prev_solution = np.array(
+        [float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'),
+         float('inf'), float('inf'), float('inf')])
+    phi_opt2, warm_start = gb_SGD(solution, prev_solution, MVG_Sigma, MVG_mu, ev_vars, evidence, method, 0, 1, ev_bounds, LEARN_RATE=LEARN_RATE, nu=nu)
+
+    prev_solution = np.array(
+        [float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'),
+         float('inf'), float('inf'), float('inf')])
+    obj_val, solution = gb_SGD(warm_start, prev_solution, MVG_Sigma, MVG_mu, ev_vars, evidence, method, U_1 / phi_opt1, U_2 / phi_opt2, ev_bounds, LEARN_RATE=LEARN_RATE, nu=nu)
+    print("Objection Function Value: ", obj_val, " at ", solution)

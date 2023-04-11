@@ -1,34 +1,29 @@
-from cplex import Model
 import numpy as np
-from functions import identify_convavity, vals_from_priors, solve_optimal_weights
+from functions import identify_convavity, vals_from_priors, solve_optimal_weights, solveqm
 
 
-def whitebox_attack(MVG_Sigma, MVG_Mu, evidence_vars, evidence, U_1, U_2, optimality_target=3):
+def whitebox_attack(MVG_Sigma, MVG_mu, evidence_vars, evidence, u_1, u_2, ev_bounds=None, risk_tolerance=.1,
+                    optimality_target=3):
+    # Compute evidence range
+    if ev_bounds is None:
+        ev_bounds = np.stack(([x * (1+risk_tolerance) for x in evidence], [x * (1-risk_tolerance) for x in evidence]))
 
-    v = vals_from_priors(MVG_Sigma, MVG_Mu, evidence_vars, evidence)
+    v = vals_from_priors(MVG_Sigma, MVG_mu, evidence_vars, evidence)
 
-    Phi_opt1, Phi_opt2 = solve_optimal_weights(v.Q, v.vT, v.K_prime, v.u_prime, len(evidence_vars))
+    phi_opt1, phi_opt2 = solve_optimal_weights(v.Q, v.vT, v.K_prime, v.u_prime, len(evidence_vars), ev_bounds=ev_bounds)
 
     rho = np.sort(np.linalg.eigvals(v.Q))
     Zeta = np.sort(np.linalg.eigvals(v.L.zz))
 
-    b_concave, b_convex = identify_convavity(rho, Phi_opt1, Zeta, Phi_opt2, len(evidence_vars))
-
-    qm = Model('DistruptionGBN')
-    z_DV = qm.continuous_var_matrix(1, len(evidence_vars), name="Z_DV", lb=-3, ub=3)  # DV for decision variable
+    b_concave, b_convex = identify_convavity(rho, phi_opt1, Zeta, phi_opt2, len(evidence_vars))
 
     # Solve normalized problem
-    W_1 = U_1 / Phi_opt1
-    W_2 = U_2 / Phi_opt2
+    w_1 = u_1 / phi_opt1
+    w_2 = u_2 / phi_opt2
 
-    Dmat = (W_1 * v.Q) - (W_2 * v.K_prime)
-    Dvec = W_1 * np.transpose(v.vT) + 2 * W_2 * np.matmul(v.K_prime, v.u_prime)
-    obj_fn = (list(z_DV.values()) @ Dmat @ list(z_DV.values())) + (Dvec @ list(z_DV.values()))
-    qm.set_objective("max", obj_fn)
+    Dmat = (w_1 * v.Q) - (w_2 * v.K_prime)
+    Dvec = w_1 * np.transpose(v.vT) + 2 * w_2 * np.matmul(v.K_prime, v.u_prime)
 
-    qm.parameters.optimalitytarget.set(optimality_target)
+    obj_value, solution_set = solveqm(Dmat, Dvec, len(evidence_vars), ev_bounds=ev_bounds, optimality_target=optimality_target)
 
-    solutionset = qm.solve()
-    qm.print_solution()
-
-    return b_concave, b_convex, solutionset, qm
+    return b_concave, b_convex, solution_set, obj_value
