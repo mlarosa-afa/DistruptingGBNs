@@ -31,8 +31,8 @@ def whitebox_attack(MVG_Sigma, MVG_mu, evidence_vars, evidence, u_1, u_2, ev_bou
     evidence = np.array([solution_set["Z_DV_0"],solution_set["Z_DV_1"],solution_set["Z_DV_2"],solution_set["Z_DV_3"],solution_set["Z_DV_4"],solution_set["Z_DV_5"],solution_set["Z_DV_6"],solution_set["Z_DV_7"],solution_set["Z_DV_8"],solution_set["Z_DV_9"],solution_set["Z_DV_10"]])
     phi_1 = np.transpose(evidence)@(w_1 * v.Q)@evidence + np.transpose(evidence) @ v.vT
     phi_2 = np.transpose(evidence)@(-1* w_2 * v.K_prime) @ evidence + (np.transpose(evidence) @ (2 * w_2 * np.matmul(v.K_prime, v.u_prime)))
-    phi_1 = phi_1/phi_opt1
-    phi_2 = phi_2 / phi_opt2
+    phi_1 = phi_1/Aphi_opt1
+    phi_2 = phi_2 / Aphi_opt2
     #temp code here
 
     return b_concave, b_convex, solution_set, obj_value, phi_1, phi_2
