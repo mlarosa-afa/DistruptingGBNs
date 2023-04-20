@@ -81,37 +81,57 @@ def LGSSM_Generate(T, epsilon_var=None, delta_var=None, mu_state_init=None, var_
 
     return Sigma, mu
 
-mode = int(input("1) Whitebox Attack\n2) Graybox - Sample Average Approximation\nSelected Mode: "))
+mode = 2# int(input("1) Whitebox Attack\n2) Graybox - Sample Average Approximation\nSelected Mode: "))
 if mode == 1:
     U_1 = float(input("Enter U_1: "))
     U_2 = 1 - U_1
     print("Caluclated weight 2 as ", U_2)
-    T = int(input("Enter number of time steps: "))
+    evidence = [0.07, 0, 1.16, .68, 2.25, 1, 3.11, 1.32, 4.05, 2.11, 5.18, 2.36, 6.24, 3.2, 6.81, 3.56, 7.77, 3.82,
+                9.15, 4.46]  # multiples of 6 starting with 4 and 5 (zero indexed)
+    #build LG-SSM based off of evidence
+    T = int(len(evidence) / 2)
     MVG_Sigma, MVG_mu = LGSSM_Generate(T)
-    ev_vars = [4, 5, 10, 11]
-    evidence = [0, 0, 1, 1]
 
-    b_concave, b_convex, solutionset, qm = whitebox_attack(MVG_Sigma, MVG_mu, ev_vars, evidence, U_1, U_2)
+    ev_vars = []  # multiples of 6 starting with 4 and 5 (zero indexed)
+    i = 4
+    while i < T * 6:
+        ev_vars.append(i)
+        ev_vars.append(i+1)
+        i = i + 6
+
+    b_concave, b_convex, solutionset, qm = whitebox_attack(MVG_Sigma, MVG_mu, ev_vars, evidence, U_1, U_2, risk_tolerance=.5)
     print("The interesting range of weight 1 ranges from ", b_concave, " to ", b_convex)
     print("Solutions that do not appear are zero.")
-    print(solutionset)
 
 if mode == 2:
 
     U_1 = float(input("Enter U 1: "))
-    U_2 = 1 - U_1
-    numSamples = int(input("Enter number of Samples: "))
+    testVal = [0.1, 0.3, 0.5, 0.7, 0.9]
+    for k in testVal:
+        U_1 = k
+        U_2 = 1 - U_1
+        print("u_1 = ", k)
+        numSamples = 100 #int(input("Enter number of Samples: "))
+        evidence = [0.07, 0, 1.16, .68, 2.25, 1, 3.11, 1.32, 4.05, 2.11, 5.18, 2.36, 6.24, 3.2, 6.81, 3.56, 7.77, 3.82,
+                    9.15, 4.46]  # multiples of 6 starting with 4 and 5 (zero indexed)
+        # build LG-SSM based off of evidence
+        T = int(len(evidence) / 2)
+        MVG_Sigma, MVG_mu = LGSSM_Generate(T)
 
-    ev_vars = [4, 5, 10, 11]  # multiples of 6 starting with 4 and 5 (zero indexed)
-    evidence = [0, 0, 1, 1]  # mess with these
+        ev_vars = []  # multiples of 6 starting with 4 and 5 (zero indexed)
+        i = 4
+        while i < T * 6:
+            ev_vars.append(i)
+            ev_vars.append(i + 1)
+            i = i + 6
 
-    cov_samples = []
-    mu_samples = []
-    for i in range(numSamples):
-        cov_sample, mu_sample = LGSSM_Generate(2)
-        cov_samples.append(cov_sample)
-        mu_samples.append(mu_sample)
+        cov_samples = []
+        mu_samples = []
+        for i in range(numSamples):
+            cov_sample, mu_sample = LGSSM_Generate(T)
+            cov_samples.append(cov_sample)
+            mu_samples.append(mu_sample)
 
-    solution = gb_SAA(cov_samples, mu_samples, ev_vars, evidence, U_1, U_2)
-    print("Solutions that do not appear are zero.")
-    print(solution)
+        solution = gb_SAA(cov_samples, mu_samples, ev_vars, evidence, U_1, U_2, risk_tolerance=.75)
+        print("Solutions that do not appear are zero.")
+        print(solution)

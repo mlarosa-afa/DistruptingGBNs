@@ -60,7 +60,7 @@ def solveqm(Dmat, Dvec, NUM_EVIDENCE, ev_bounds = None, optimality_target = 3):
         z_DV[i] = qm.continuous_var(name="Z_DV_" + str(i), ub=ev_bounds[0][i], lb=ev_bounds[1][i])  # DV for decision variable
 
     # Add objective function
-    obj_fn = (list(z_DV.values()) @ Dmat @ list(z_DV.values())) + (Dvec @ list(z_DV.values()))
+    obj_fn = (list(z_DV.values()) @ Dmat @ list(z_DV.values())) + (list(z_DV.values()) @ Dvec)
     qm.set_objective("max", obj_fn)
 
     # This can be improved by including concavity into the decision
@@ -114,16 +114,19 @@ def vals_from_priors(MVG_Sigma, MVG_Mu, evidence_vars, evidence):
 #given optimals and eigenvalues, calculates concavity
 def identify_convavity(rho, Phi_1_opt, Zeta, Phi_2_opt, NUM_EVIDENCE_VARS):
     #identify best constraints
+    APhi_1_opt = abs(Phi_1_opt)
+    APhi_2_opt = abs(Phi_2_opt)
     b_concave = np.inf
     b_convex = -np.inf
     for rho_index in range(1,len(rho)+1):
         for zeta_index in range(1,len(Zeta)+1):
-            const = ((Zeta[zeta_index-1] / Phi_2_opt) / ((rho[rho_index-1] / Phi_1_opt) + (Zeta[zeta_index-1] / Phi_2_opt)))
+            const = ((Zeta[zeta_index-1] / APhi_2_opt) / ((rho[rho_index-1] / APhi_1_opt) + (Zeta[zeta_index-1] / APhi_2_opt)))
             if rho_index + zeta_index - 1 <= NUM_EVIDENCE_VARS:
                 if const < b_concave:
                     b_concave = const
             if rho_index + zeta_index - NUM_EVIDENCE_VARS <= NUM_EVIDENCE_VARS and 1 <= rho_index + zeta_index - NUM_EVIDENCE_VARS:
                 if const > b_convex:
                     b_convex = const
-
+            b_concave = np.real(b_concave)
+            b_convex = np.real(b_convex)
     return b_concave, b_convex
