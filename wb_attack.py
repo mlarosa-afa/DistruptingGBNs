@@ -13,7 +13,9 @@ def whitebox_attack(MVG_Sigma, MVG_mu, evidence_vars, evidence, u_1, u_2, ev_bou
     phi_opt1, phi_opt2 = solve_optimal_weights(v.Q, v.vT, v.K_prime, v.u_prime, len(evidence_vars), ev_bounds=ev_bounds)
 
     rho = np.sort(np.real(np.linalg.eigvals(v.Q)))[::-1]
-    Zeta = np.sort(np.real(np.linalg.eigvals(v.L.zz)))[::-1]
+    #Zeta = np.sort(np.real(np.linalg.eigvals(v.L.zz)))[::-1]
+    invSigma_zz= np.linalg.inv(v.Sigma_zz)
+    Zeta = np.sort(np.real(np.linalg.eigvals(invSigma_zz)))[::-1]
 
     b_concave, b_convex = identify_convavity(rho, phi_opt1, Zeta, phi_opt2, len(evidence_vars))
     Aphi_opt1 = abs(phi_opt1)

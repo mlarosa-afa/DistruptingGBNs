@@ -16,8 +16,8 @@ class Lambda:
         self.zz = np.delete(self.zz, unobserved_vars, 0)
 
 class normal_parameters:
-    def __init__(self, Q, vT, c, K,h,g, K_prime,h_prime,u_prime, S_prime, L):
-        self.Q, self.vT, self.c, self.K, self.h, self.g, self.K_prime, self.h_prime, self.u_prime, self.S_prime, self.L = Q, vT, c, K,h,g, K_prime,h_prime,u_prime, S_prime, L
+    def __init__(self, Q, vT, c, K,h,g, K_prime,h_prime,u_prime, S_prime, L, Sigma_zz):
+        self.Q, self.vT, self.c, self.K, self.h, self.g, self.K_prime, self.h_prime, self.u_prime, self.S_prime, self.L ,self.Sigma_zz= Q, vT, c, K,h,g, K_prime,h_prime,u_prime, S_prime, L, Sigma_zz
 
 #Generates a Positive Definate square matrix of dimention num_dim.
 #There may be room for optimization here
@@ -108,7 +108,7 @@ def vals_from_priors(MVG_Sigma, MVG_Mu, evidence_vars, evidence):
     Q = np.matmul(np.matmul(np.transpose(L.yz), np.linalg.inv(K)), L.yz)
     vT = 2 * (np.matmul(np.transpose(u_dot), L.yz) - np.matmul(np.matmul(np.transpose(eta_y), np.linalg.inv(K)), L.yz))
     c = np.matmul(np.matmul(np.transpose(u_dot), K), u_dot) - 2 * np.matmul(np.transpose(eta_y), u_dot) + np.matmul(np.transpose(eta_y), np.matmul(np.linalg.inv(K), eta_y))
-    vals = normal_parameters(Q, vT, c, K,h,g, K_prime,h_prime,u_prime, S_prime, L)
+    vals = normal_parameters(Q, vT, c, K,h,g, K_prime,h_prime,u_prime, S_prime, L,Sigma_zz)
     return vals
 
 #given optimals and eigenvalues, calculates concavity

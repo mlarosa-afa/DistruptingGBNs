@@ -76,24 +76,25 @@ mode = int(input("1) Whitebox Attack\n2) Graybox - Sample Average Approximation\
 if mode == 1:
     with open("Zillow_WB_PFront.tsv", "w+") as f:
         f.write("u_1\tu_2\tz_1\tz_2\tz_3\tz_4\tz_5\tz_6\tz_7\tz_8\tz_9\tz_10\tz_11\tObj\tϕ_1\tϕ_2\n")
-        for i in np.arange(0.0, 1.0, 0.01):
-            U_1 = i#float(input("Enter U 1: "))
-            U_2 = 1 - U_1
+        #for i in np.arange(0.0, 1.0, 0.01):
+        U_1 = float(input("Enter U 1: "))
+            #U_1 = i#float(input("Enter U 1: "))
+        U_2 = 1 - U_1
             #print("Caluclated weight 2 as ", U_2)
-            ev_vars = [0, 1, 2, 3, 5, 6, 8, 10, 11, 12, 14]
-            evidence = [1.45885, 1.21453, 1.34413, 1.37732, .94179, 1.53126, .83859, .76678, .67944, .85680, .53759]
-            ev_bounds = np.stack(
+        ev_vars = [0, 1, 2, 3, 5, 6, 8, 10, 11, 12, 14]
+        evidence = [1.45885, 1.21453, 1.34413, 1.37732, .94179, 1.53126, .83859, .76678, .67944, .85680, .53759]
+        ev_bounds = np.stack(
                 ([x + .15 for x in evidence], [x -.15 for x in evidence]))
 
-            b_concave, b_convex, solutionset, obj_value, phi1, phi2 = whitebox_attack(MVG_Sigma, MVG_mu, ev_vars,
+        b_concave, b_convex, solutionset, obj_value, phi1, phi2 = whitebox_attack(MVG_Sigma, MVG_mu, ev_vars,
                                                             evidence, U_1, U_2, ev_bounds=ev_bounds, risk_tolerance=.15)
-            #print("The interesting range of weight 1 ranges from ", b_concave, " to ", b_convex)
-            #print(solutionset)
+        print("The interesting range of weight 1 ranges from ", b_concave, " to ", b_convex)
+        print(solutionset)
 
-            f.write(str(U_1) + "\t" + str(U_2))
-            for j in range(11):
-                f.write("\t" + str(solutionset["Z_DV_" + str(j)]))
-            f.write("\t" +str(obj_value) + "\t"+ str(phi1) + "\t" + str(phi2) + "\n")
+            #f.write(str(U_1) + "\t" + str(U_2))
+            #for j in range(11):
+            #    f.write("\t" + str(solutionset["Z_DV_" + str(j)]))
+            #f.write("\t" +str(obj_value) + "\t"+ str(phi1) + "\t" + str(phi2) + "\n")
 
 
 elif mode == 2:
@@ -107,9 +108,12 @@ elif mode == 2:
     print("Caluclated weight 2 as ", U_2)
     numSamples = int(input("Enter number of Samples: "))
     ev_vars = [0,1,2,3,5,6,8,10,11,12,14]
-    evidence = [145885, 121453, 134413, 137732, 94179, 153126, 83859, 76678, 67944, 85680, 53759]
-    upper_bounds = [x + 15000 for x in evidence]
-    lower_bounds = [x - 15000 for x in evidence]
+    #evidence = [145885, 121453, 134413, 137732, 94179, 153126, 83859, 76678, 67944, 85680, 53759]
+    evidence = [1.45885, 1.21453, 1.34413, 1.37732, .94179, 1.53126, .83859, .76678, .67944, .85680, .53759]
+    #upper_bounds = [x + 15000 for x in evidence]
+    #lower_bounds = [x - 15000 for x in evidence]
+    upper_bounds = [x + 0.15 for x in evidence]
+    lower_bounds = [x - 0.15 for x in evidence]
     ev_bounds = np.stack((upper_bounds, lower_bounds))
 
     cov_samples = invwishart.rvs(df=nu, scale=Psi, size=numSamples)
@@ -128,19 +132,22 @@ elif mode == 3:
     nu = int(input("Enter degrees of freedom: "))
 
     ev_vars = [0, 1, 2, 3, 5, 6, 8, 10, 11, 12, 14]
-    evidence = [145885, 121453, 134413, 137732, 94179, 153126, 83859, 76678, 67944, 85680, 53759]
+    #evidence = [145885, 121453, 134413, 137732, 94179, 153126, 83859, 76678, 67944, 85680, 53759]
+    evidence = [1.45885, 1.21453, 1.34413, 1.37732, .94179, 1.53126, .83859, .76678, .67944, .85680, .53759]
+
 
     print("Please select a method:\n\t1.AdaGrad\n\t2.RMSProp\n\t3.Adam")
     method = int(input("method: "))
     LEARN_RATE = float(input("Learning Rate: "))
 
-    solution = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    solution = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     prev_solution = np.array([float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf')])
-    ev_bounds = np.stack(([x + 15000 for x in evidence], [x - 15000 for x in evidence]))
+    #ev_bounds = np.stack(([x + 15000 for x in evidence], [x - 15000 for x in evidence]))
+    ev_bounds = np.stack(([x + 0.15 for x in evidence], [x - 0.15 for x in evidence]))
 
     phi_opt1, solution = gb_SGD(solution, prev_solution, MVG_Sigma, MVG_mu, ev_vars, evidence, method, 1, 0, ev_bounds, LEARN_RATE=LEARN_RATE, nu=nu)
 
-    solution = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    solution = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
     prev_solution = np.array(
         [float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'),
          float('inf'), float('inf'), float('inf')])

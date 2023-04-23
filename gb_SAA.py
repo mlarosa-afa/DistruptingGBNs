@@ -14,7 +14,7 @@ def gb_SAA(cov_samples, mu_samples, ev_cols, evidence, U_1, U_2, ev_bounds = Non
     #Convert Sample to normal form
     for i in range(len(cov_samples)):
         vals = vals_from_priors(cov_samples[i], mu_samples[i], ev_cols, evidence)
-        parameters.append((vals.Q, vals.vT, vals.c, vals.K_prime, vals.u_prime))
+        parameters.append((vals.Q, vals.vT, vals.c, vals.K_prime, vals.u_prime))  #Note uses canonical formto find Sigmazz^-1 and mu[Z}
 
     #Solve for Phi_1* and Phi_2*
     Dmat_phi_1 = np.zeros((len(ev_cols), len(ev_cols)))

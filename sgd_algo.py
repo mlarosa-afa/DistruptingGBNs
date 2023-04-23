@@ -13,11 +13,13 @@ def check_gd_bounds(constraint, curr_pos, step):
     return new_pos
 
 def adaGrad(gradient, constraint, curr_pos, learn_rate=0.001, v = 0):
-    step = (learn_rate / sqrt(v + (.00001))) * gradient(curr_pos)
+    direction = gradient(curr_pos) / np.linalg.norm(gradient(curr_pos))
+    step = (learn_rate / sqrt(v + (.00001))) * direction
     v_t_1 = v + pow(np.linalg.norm(gradient(curr_pos)), 2)
     return check_gd_bounds(constraint, curr_pos, step), v_t_1
 
 def RMSProp(gradient, constraint, curr_pos, learn_rate= 0.001, v = 0, beta = .9):
+    direction = gradient(curr_pos) / np.linalg.norm(gradient(curr_pos))
     step = ((learn_rate / sqrt(v + (.00001))) * gradient(curr_pos))
     v_t_1 = (beta * v) + ((1-beta) * pow(np.linalg.norm(gradient(curr_pos)), 2))
     return check_gd_bounds(constraint, curr_pos, step), v_t_1
