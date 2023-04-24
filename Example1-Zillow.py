@@ -1,9 +1,11 @@
 import numpy as np
 from functions import *
-
 from wb_attack import whitebox_attack
 from gb_SAA import gb_SAA
 from gb_SGD import gb_SGD
+import time
+import sys
+
 """
 MVG_Sigma = np.array([[5633137202, 3953563504, 5696545030, 5908408469, 3132652814, 4685958540, 7125401077, 2482538832, 4870543242, 3045394255, 4394534262, 3094643611, 2464755361, 3137883995, 970932982],
 [3953563504, 2783169882, 3999281027, 4143483396, 2206383839, 3289192094, 5009204007, 1744846049, 3425662374, 2145399315, 3089934638, 2177248225, 1732910795, 2211766588, 689762418],
@@ -42,119 +44,147 @@ MVG_Sigma = np.array([[5633.13720182397,3953.56350442939,5696.54502995966,5908.4
 [970.932982264266,689.762417592559,981.144822255607,1005.44594094879,543.784447421731,804.710857726163,1232.38645708968,434.157813784582,852.577112890332,533.457598906657,762.385154009007,543.195590857245,438.156984896257,552.448584820142,207.220820180105]])
 MVG_mu = np.array([332.823814591464,243.985668404878,261.218564897561,363.589741642683,182.822203369512,244.082363564634,429.786776240244,167.151774896341,239.382750287805,182.17597452561,237.685315231707,177.700859819512,179.807453914634,184.921322840244,89.2414639643902])
 """
-MVG_Sigma = np.array([[0.563313720182397,0.39535635,0.569654503,0.590840847,0.313265281,0.468595854,0.712540108,0.248253883,0.487054324,0.304539426,0.439453426,0.309464361,0.246475536,0.313788399,0.0970932982264266],
-[0.395356350442939,0.278316988,0.399928103,0.41434834,0.220638384,0.328919209,0.500920401,0.174484605,0.342566237,0.214539932,0.308993464,0.217724822,0.17329108,0.221176659,0.0689762417592559],
-[0.569654502995966,0.399928103,0.577510646,0.597525883,0.316737922,0.473895931,0.721473111,0.250276251,0.493181659,0.308992996,0.444805629,0.312764333,0.248355517,0.317527807,0.0981144822255607],
-[0.590840846865913,0.41434834,0.597525883,0.621866982,0.327957346,0.493185014,0.745874435,0.260956771,0.510695529,0.318352726,0.461152242,0.324799592,0.259292037,0.328720383,0.100544594094879],
-[0.313265281424638,0.220638384,0.316737922,0.327957346,0.175500541,0.260203355,0.397628599,0.138343108,0.271389515,0.170120072,0.245001364,0.172489954,0.136951895,0.175402044,0.0543784447421731],
-[0.468595853971231,0.328919209,0.473895931,0.493185014,0.260203355,0.391557012,0.591086718,0.207224173,0.40545267,0.252432886,0.365938539,0.258076474,0.20626756,0.261155507,0.0804710857726163],
-[0.712540107655088,0.500920401,0.721473111,0.745874435,0.397628599,0.591086718,0.905974481,0.312921431,0.617011873,0.38804594,0.556425234,0.391012182,0.309702796,0.397469916,0.123238645708968],
-[0.248253883188861,0.174484605,0.250276251,0.260956771,0.138343108,0.207224173,0.312921431,0.110860624,0.214579824,0.133219738,0.194040455,0.136955461,0.110217591,0.138835781,0.0434157813784582],
-[0.487054324221806,0.342566237,0.493181659,0.510695529,0.271389515,0.40545267,0.617011873,0.214579824,0.422390733,0.264442451,0.380642085,0.268233868,0.213323657,0.272127771,0.0852577112890332],
-[0.304539425505274,0.214539932,0.308992996,0.318352726,0.170120072,0.252432886,0.38804594,0.133219738,0.264442451,0.167207075,0.238036784,0.167242629,0.132037315,0.170326775,0.0533457598906657],
-[0.439453426225957,0.308993464,0.444805629,0.461152242,0.245001364,0.365938539,0.556425234,0.194040455,0.380642085,0.238036784,0.343589292,0.241890247,0.192580318,0.245542478,0.0762385154009007],
-[0.309464361100225,0.217724822,0.312764333,0.324799592,0.172489954,0.258076474,0.391012182,0.136955461,0.268233868,0.167242629,0.241890247,0.170871863,0.136394927,0.173073124,0.0543195590857245],
-[0.246475536133703,0.17329108,0.248355517,0.259292037,0.136951895,0.20626756,0.309702796,0.110217591,0.213323657,0.132037315,0.192580318,0.136394927,0.110266897,0.137957339,0.0438156984896258],
-[0.313788399450192,0.221176659,0.317527807,0.328720383,0.175402044,0.261155507,0.397469916,0.138835781,0.272127771,0.170326775,0.245542478,0.173073124,0.137957339,0.176119568,0.0552448584820142],
-[0.0970932982264266,0.068976242,0.098114482,0.100544594,0.054378445,0.080471086,0.123238646,0.043415781,0.085257711,0.05334576,0.076238515,0.054319559,0.043815698,0.055244858,0.0207220820180105]])
+MVG_Sigma = np.array([[0.563313720182397, 0.39535635, 0.569654503, 0.590840847, 0.313265281, 0.468595854, 0.712540108,
+                       0.248253883, 0.487054324, 0.304539426, 0.439453426, 0.309464361, 0.246475536, 0.313788399,
+                       0.0970932982264266],
+                      [0.395356350442939, 0.278316988, 0.399928103, 0.41434834, 0.220638384, 0.328919209, 0.500920401,
+                       0.174484605, 0.342566237, 0.214539932, 0.308993464, 0.217724822, 0.17329108, 0.221176659,
+                       0.0689762417592559],
+                      [0.569654502995966, 0.399928103, 0.577510646, 0.597525883, 0.316737922, 0.473895931, 0.721473111,
+                       0.250276251, 0.493181659, 0.308992996, 0.444805629, 0.312764333, 0.248355517, 0.317527807,
+                       0.0981144822255607],
+                      [0.590840846865913, 0.41434834, 0.597525883, 0.621866982, 0.327957346, 0.493185014, 0.745874435,
+                       0.260956771, 0.510695529, 0.318352726, 0.461152242, 0.324799592, 0.259292037, 0.328720383,
+                       0.100544594094879],
+                      [0.313265281424638, 0.220638384, 0.316737922, 0.327957346, 0.175500541, 0.260203355, 0.397628599,
+                       0.138343108, 0.271389515, 0.170120072, 0.245001364, 0.172489954, 0.136951895, 0.175402044,
+                       0.0543784447421731],
+                      [0.468595853971231, 0.328919209, 0.473895931, 0.493185014, 0.260203355, 0.391557012, 0.591086718,
+                       0.207224173, 0.40545267, 0.252432886, 0.365938539, 0.258076474, 0.20626756, 0.261155507,
+                       0.0804710857726163],
+                      [0.712540107655088, 0.500920401, 0.721473111, 0.745874435, 0.397628599, 0.591086718, 0.905974481,
+                       0.312921431, 0.617011873, 0.38804594, 0.556425234, 0.391012182, 0.309702796, 0.397469916,
+                       0.123238645708968],
+                      [0.248253883188861, 0.174484605, 0.250276251, 0.260956771, 0.138343108, 0.207224173, 0.312921431,
+                       0.110860624, 0.214579824, 0.133219738, 0.194040455, 0.136955461, 0.110217591, 0.138835781,
+                       0.0434157813784582],
+                      [0.487054324221806, 0.342566237, 0.493181659, 0.510695529, 0.271389515, 0.40545267, 0.617011873,
+                       0.214579824, 0.422390733, 0.264442451, 0.380642085, 0.268233868, 0.213323657, 0.272127771,
+                       0.0852577112890332],
+                      [0.304539425505274, 0.214539932, 0.308992996, 0.318352726, 0.170120072, 0.252432886, 0.38804594,
+                       0.133219738, 0.264442451, 0.167207075, 0.238036784, 0.167242629, 0.132037315, 0.170326775,
+                       0.0533457598906657],
+                      [0.439453426225957, 0.308993464, 0.444805629, 0.461152242, 0.245001364, 0.365938539, 0.556425234,
+                       0.194040455, 0.380642085, 0.238036784, 0.343589292, 0.241890247, 0.192580318, 0.245542478,
+                       0.0762385154009007],
+                      [0.309464361100225, 0.217724822, 0.312764333, 0.324799592, 0.172489954, 0.258076474, 0.391012182,
+                       0.136955461, 0.268233868, 0.167242629, 0.241890247, 0.170871863, 0.136394927, 0.173073124,
+                       0.0543195590857245],
+                      [0.246475536133703, 0.17329108, 0.248355517, 0.259292037, 0.136951895, 0.20626756, 0.309702796,
+                       0.110217591, 0.213323657, 0.132037315, 0.192580318, 0.136394927, 0.110266897, 0.137957339,
+                       0.0438156984896258],
+                      [0.313788399450192, 0.221176659, 0.317527807, 0.328720383, 0.175402044, 0.261155507, 0.397469916,
+                       0.138835781, 0.272127771, 0.170326775, 0.245542478, 0.173073124, 0.137957339, 0.176119568,
+                       0.0552448584820142],
+                      [0.0970932982264266, 0.068976242, 0.098114482, 0.100544594, 0.054378445, 0.080471086, 0.123238646,
+                       0.043415781, 0.085257711, 0.05334576, 0.076238515, 0.054319559, 0.043815698, 0.055244858,
+                       0.0207220820180105]])
 MVG_mu = np.array([3.328238146,
-2.439856684,
-2.612185649,
-3.635897416,
-1.828222034,
-2.440823636,
-4.297867762,
-1.671517749,
-2.393827503,
-1.821759745,
-2.376853152,
-1.777008598,
-1.798074539,
-1.849213228,
-0.89241464])
-mode = int(input("1) Whitebox Attack\n2) Graybox - Sample Average Approximation\n3) Graybox - Stocastic Gradient Descent\nSelected Mode: "))
+                   2.439856684,
+                   2.612185649,
+                   3.635897416,
+                   1.828222034,
+                   2.440823636,
+                   4.297867762,
+                   1.671517749,
+                   2.393827503,
+                   1.821759745,
+                   2.376853152,
+                   1.777008598,
+                   1.798074539,
+                   1.849213228,
+                   0.89241464])
+
+ev_vars = [0, 1, 2, 3, 5, 6, 8, 10, 11, 12, 14]
+evidence = [1.45885, 1.21453, 1.34413, 1.37732, .94179, 1.53126, .83859, .76678, .67944, .85680, .53759]
+ev_bounds = np.stack(([x + .15 for x in evidence], [x - .15 for x in evidence]))
+
+if not len(sys.argv) >= 2:
+    raise Exception("No mode parameter passed.")
+mode = int(sys.argv[1])
+if mode == 1 and not len(sys.argv) == 3:
+    raise Exception("Whitebox Selected, but ", len(sys.argv), " arguments passed -- 3 expected.")
+elif mode == 2 and not len(sys.argv) == 8:
+    raise Exception("GB SAA Selected, but ", len(sys.argv), " arguments passed -- 8 expected.")
+elif mode == 3 and not len(sys.argv) == 10:
+    raise Exception("GB SGA Selected, but ", len(sys.argv), " arguments passed -- 10 expected.")
+
+#Whitebox arguments -- u_1
 if mode == 1:
-    with open("Zillow_WB_PFront.tsv", "w+") as f:
-        f.write("u_1\tu_2\tz_1\tz_2\tz_3\tz_4\tz_5\tz_6\tz_7\tz_8\tz_9\tz_10\tz_11\tObj\tϕ_1\tϕ_2\n")
-        #for i in np.arange(0.0, 1.0, 0.01):
-        U_1 = float(input("Enter U 1: "))
-            #U_1 = i#float(input("Enter U 1: "))
-        U_2 = 1 - U_1
-            #print("Caluclated weight 2 as ", U_2)
-        ev_vars = [0, 1, 2, 3, 5, 6, 8, 10, 11, 12, 14]
-        evidence = [1.45885, 1.21453, 1.34413, 1.37732, .94179, 1.53126, .83859, .76678, .67944, .85680, .53759]
-        ev_bounds = np.stack(
-                ([x + .15 for x in evidence], [x -.15 for x in evidence]))
-
-        b_concave, b_convex, solutionset, obj_value, phi1, phi2 = whitebox_attack(MVG_Sigma, MVG_mu, ev_vars,
-                                                            evidence, U_1, U_2, ev_bounds=ev_bounds, risk_tolerance=.15)
-        print("The interesting range of weight 1 ranges from ", b_concave, " to ", b_convex)
-        print(solutionset)
-
-            #f.write(str(U_1) + "\t" + str(U_2))
-            #for j in range(11):
-            #    f.write("\t" + str(solutionset["Z_DV_" + str(j)]))
-            #f.write("\t" +str(obj_value) + "\t"+ str(phi1) + "\t" + str(phi2) + "\n")
-
-
-elif mode == 2:
-    Psi = MVG_Sigma
-    mu_not = MVG_mu
-    KAPPA = 4
-    nu = len(mu_not)
-
-    U_1 = float(input("Enter U 1: "))
+    U_1 = float(sys.argv[2])
     U_2 = 1 - U_1
-    print("Caluclated weight 2 as ", U_2)
-    numSamples = int(input("Enter number of Samples: "))
-    ev_vars = [0,1,2,3,5,6,8,10,11,12,14]
-    #evidence = [145885, 121453, 134413, 137732, 94179, 153126, 83859, 76678, 67944, 85680, 53759]
-    evidence = [1.45885, 1.21453, 1.34413, 1.37732, .94179, 1.53126, .83859, .76678, .67944, .85680, .53759]
-    #upper_bounds = [x + 15000 for x in evidence]
-    #lower_bounds = [x - 15000 for x in evidence]
-    upper_bounds = [x + 0.15 for x in evidence]
-    lower_bounds = [x - 0.15 for x in evidence]
-    ev_bounds = np.stack((upper_bounds, lower_bounds))
 
+    b_concave, b_convex, solutionset, obj_value, phi1, phi2 = whitebox_attack(MVG_Sigma, MVG_mu, ev_vars,
+                                                                              evidence, U_1, U_2,
+                                                                              ev_bounds=ev_bounds,
+                                                                              risk_tolerance=.15)
+    print("Interesting range of u_1: ", b_concave, " to ", b_convex)
+    print(solutionset)
+
+#GB SAA--u_1, numsamples, Psi coefficent, mu coefficent, Kappa, nu
+elif mode == 2:
+    U_1 = float(sys.argv[2])
+    U_2 = 1 - U_1
+    numSamples = int(sys.argv[3])
+
+    Psi = float(sys.argv[4]) * MVG_Sigma
+    mu_not = float(sys.argv[5]) * MVG_mu
+    KAPPA = float(sys.argv[6])
+    nu = int(sys.argv[7])
+
+    start_time = time.time()
     cov_samples = invwishart.rvs(df=nu, scale=Psi, size=numSamples)
 
     mu_samples = []
     for cov_sample in cov_samples:
-        mu_samples.append(np.random.multivariate_normal(mu_not, (1/KAPPA) * cov_sample))
+        mu_samples.append(np.random.multivariate_normal(mu_not, (1 / KAPPA) * cov_sample))
 
     solution = gb_SAA(cov_samples, mu_samples, ev_vars, evidence, U_1, U_2, ev_bounds=ev_bounds)
+    print("total time: ", time.time() - start_time)
     print(solution)
 
+#GB SAA--u_1, method, Psi coefficent, mu coefficent, Kappa, nu, learn rate, epsilon
+#Method:1.AdaGrad 2.RMSProp 3.Adam
 elif mode == 3:
-    U_1 = float(input("Enter U 1: "))
+    U_1 = float(sys.argv[2])
     U_2 = 1 - U_1
-    print("Caluclated weight 2 as ", U_2)
-    nu = int(input("Enter degrees of freedom: "))
-
-    ev_vars = [0, 1, 2, 3, 5, 6, 8, 10, 11, 12, 14]
-    #evidence = [145885, 121453, 134413, 137732, 94179, 153126, 83859, 76678, 67944, 85680, 53759]
-    evidence = [1.45885, 1.21453, 1.34413, 1.37732, .94179, 1.53126, .83859, .76678, .67944, .85680, .53759]
-
-
-    print("Please select a method:\n\t1.AdaGrad\n\t2.RMSProp\n\t3.Adam")
-    method = int(input("method: "))
-    LEARN_RATE = float(input("Learning Rate: "))
+    method = int(sys.argv[3])
+    Psi = float(sys.argv[4]) * MVG_Sigma
+    mu_not = float(sys.argv[5]) * MVG_mu
+    KAPPA = float(sys.argv[6])
+    nu = int(sys.argv[7])
+    LEARN_RATE = float(sys.argv[8])
+    epsilon = float(sys.argv[9])
 
     solution = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-    prev_solution = np.array([float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf')])
-    #ev_bounds = np.stack(([x + 15000 for x in evidence], [x - 15000 for x in evidence]))
-    ev_bounds = np.stack(([x + 0.15 for x in evidence], [x - 0.15 for x in evidence]))
-
-    phi_opt1, solution = gb_SGD(solution, prev_solution, MVG_Sigma, MVG_mu, ev_vars, evidence, method, 1, 0, ev_bounds, LEARN_RATE=LEARN_RATE, nu=nu)
+    prev_solution = np.array([float('inf'), float('inf'), float('inf'), float('inf'), float('inf'),
+                               float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf')])
+    start_time = time.time()
+    phi_opt1, solution = gb_SGD(solution, prev_solution, Psi, mu_not, ev_vars, evidence, method, 1, 0,
+                                ev_bounds, LEARN_RATE=LEARN_RATE, nu=nu, KAPPA=KAPPA, epsilon=epsilon)
 
     solution = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-    prev_solution = np.array(
-        [float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'),
-         float('inf'), float('inf'), float('inf')])
-    phi_opt2, warm_start = gb_SGD(solution, prev_solution, MVG_Sigma, MVG_mu, ev_vars, evidence, method, 0, 1, ev_bounds, LEARN_RATE=LEARN_RATE, nu=nu)
+    prev_solution = np.array([float('inf'), float('inf'), float('inf'), float('inf'), float('inf'),
+                              float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf')])
+    phi_opt2, warm_start = gb_SGD(solution, prev_solution, Psi, mu_not, ev_vars, evidence, method, 0, 1,
+                                  ev_bounds, LEARN_RATE=LEARN_RATE, nu=nu, KAPPA=KAPPA, epsilon=epsilon)
 
-    prev_solution = np.array(
-        [float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf'),
-         float('inf'), float('inf'), float('inf')])
-    obj_val, solution = gb_SGD(warm_start, prev_solution, MVG_Sigma, MVG_mu, ev_vars, evidence, method, U_1 / phi_opt1, U_2 / phi_opt2, ev_bounds, LEARN_RATE=LEARN_RATE, nu=nu)
+    prev_solution = np.array([float('inf'), float('inf'), float('inf'), float('inf'), float('inf'),
+                              float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf')])
+    obj_val, solution = gb_SGD(warm_start, prev_solution, Psi, mu_not, ev_vars, evidence, method,
+                               U_1 / abs(phi_opt1), U_2 / abs(phi_opt2), ev_bounds,
+                               LEARN_RATE=LEARN_RATE, nu=nu, KAPPA=KAPPA, epsilon=epsilon)
+    print("Total Time: ", time.time() - start_time)
     print("Objection Function Value: ", obj_val, " at ", solution)
+
+
