@@ -12,7 +12,7 @@ def gb_SGD(solution, prev_solution, Psi, mu_not, ev_vars, evidence, method, W_1,
     Dmat = np.zeros((len(ev_vars), len(ev_vars)))
     Dvec = np.zeros(len(ev_vars))
 
-    v = 0
+    R = np.zeros((len(ev_vars), len(ev_vars)))
     t = 1
     m = 0
     np.random.seed(seed)
@@ -27,14 +27,14 @@ def gb_SGD(solution, prev_solution, Psi, mu_not, ev_vars, evidence, method, W_1,
         Dvec = W_1 * np.transpose(vals.vT) + 2 * W_2 * np.matmul(vals.K_prime, vals.u_prime)
         prev_solution = copy(solution)
         if method == 1:
-            solution, v = adaGrad(lambda z: (Dmat + Dmat.transpose()) @ z + Dvec, constraint, solution,
-                                  LEARN_RATE, v=v, epsilon=epsilon)
+            solution, R = adaGrad(lambda z: (Dmat + Dmat.transpose()) @ z + Dvec, constraint, solution,R,
+                                  LEARN_RATE, epsilon=epsilon)
         elif method == 2:
-            solution, v = RMSProp(lambda z: (Dmat + Dmat.transpose()) @ z + Dvec, constraint, solution,
-                                  LEARN_RATE, v=v, epsilon=epsilon)
+            solution, R = RMSProp(lambda z: (Dmat + Dmat.transpose()) @ z + Dvec, constraint, solution,R,
+                                  LEARN_RATE, R, epsilon=epsilon)
         elif method == 3:
-            solution, v, m = adam(lambda z: (Dmat + Dmat.transpose()) @ z + Dvec, constraint, solution,
-                                  LEARN_RATE, t=t, v=v, m=m, epsilon=epsilon)
+            solution, R, m = adam(lambda z: (Dmat + Dmat.transpose()) @ z + Dvec, constraint, solution,R,
+                                  LEARN_RATE, t=t, m=m, epsilon=epsilon)
             t = t + 1
 
     obj_val = solution @ Dmat @ solution + Dvec @ solution
