@@ -138,6 +138,6 @@ obj_val, solution = gb_SGD(warm_start, prev_solution, Psi, mu_not, ev_vars, evid
                            U_1 / abs(phi_opt1), U_2 / abs(phi_opt2), ev_bounds,
                            LEARN_RATE=LEARN_RATE, nu=nu, KAPPA=KAPPA, epsilon=epsilon)
 print("Total Time: ", time.time() - start_time)
-print("Objection Function Value: ", obj_val, " at ", solution)
+print("Objection Function Value: ", obj_val, " at ", solution) #
 
 

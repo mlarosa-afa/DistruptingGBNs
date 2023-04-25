@@ -12,7 +12,7 @@ def gb_SGD(solution, prev_solution, Psi, mu_not, ev_vars, evidence, method, W_1,
     Dmat = np.zeros((len(ev_vars), len(ev_vars)))
     Dvec = np.zeros(len(ev_vars))
 
-    R = np.zeros((len(ev_vars), len(ev_vars)))
+    R = np.zeros((len(ev_vars), len(ev_vars))) #
     t = 1
     m = 0
     np.random.seed(seed)

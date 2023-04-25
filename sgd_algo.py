@@ -39,4 +39,4 @@ def adam(gradient, constraint, curr_pos, R, learn_rate= 0.001, t = 0, m = 0, bet
     #v_t_1 = (beta_1 * v) + ((1 - beta_2) * pow(np.linalg.norm(gradient(curr_pos)), 2))
     #v_t_1_hat = v_t_1 / (1 - pow(beta_2, t))
     #step = (learn_rate / (np.sqrt(v_t_1_hat) + epsilon)) * m_t_1_hat
-    return check_gd_bounds(constraint, curr_pos, step), R_t_1, m_t_1
+    return check_gd_bounds(constraint, curr_pos, step), R_t_1, m_t_1 #
