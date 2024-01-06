@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 from functions import *
 from wb_attack import whitebox_attack
@@ -109,35 +111,92 @@ ev_vars = [0, 1, 2, 3, 5, 6, 8, 10, 11, 12, 14]
 evidence = [1.45885, 1.21453, 1.34413, 1.37732, .94179, 1.53126, .83859, .76678, .67944, .85680, .53759]
 ev_bounds = np.stack(([x + .15 for x in evidence], [x - .15 for x in evidence]))
 
-U_1 = float(0.5)
-U_2 = 1 - U_1
-method = int(3)
-Psi = MVG_Sigma
-mu_not = MVG_mu
-KAPPA = 5
-nu = 17
-LEARN_RATE = 0.00001
-epsilon = 10**-6
 
-solution = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-prev_solution = np.array([float('inf'), float('inf'), float('inf'), float('inf'), float('inf'),
-                           float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf')])
-start_time = time.time()
-phi_opt1, solution = gb_SGD(solution, prev_solution, Psi, mu_not, ev_vars, evidence, method, 1, 0,
-                            ev_bounds, LEARN_RATE=LEARN_RATE, nu=nu, KAPPA=KAPPA, epsilon=epsilon)
+def zillow_wb(U_1, concavityFlag=False, timeFlag=False):
+    U_2 = 1 - U_1
 
-solution = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-prev_solution = np.array([float('inf'), float('inf'), float('inf'), float('inf'), float('inf'),
-                          float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf')])
-phi_opt2, warm_start = gb_SGD(solution, prev_solution, Psi, mu_not, ev_vars, evidence, method, 0, 1,
-                              ev_bounds, LEARN_RATE=LEARN_RATE, nu=nu, KAPPA=KAPPA, epsilon=epsilon)
+    start_time = time.time()
+    b_concave, b_convex, obj_val, solution, phi_1, phi_2 = whitebox_attack(MVG_Sigma, MVG_mu, ev_vars,
+                                                                                 evidence, U_1, U_2,
+                                                                                 ev_bounds=ev_bounds)
+    end_time = time.time()
+    print(U_1, U_2, solution["Z_DV_0"], solution["Z_DV_1"], solution["Z_DV_2"], solution["Z_DV_3"],
+          solution["Z_DV_4"], solution["Z_DV_5"], solution["Z_DV_6"], solution["Z_DV_7"],
+          solution["Z_DV_8"], solution["Z_DV_9"], solution["Z_DV_10"], obj_val, phi_1, phi_2, sep="\t")
 
-prev_solution = np.array([float('inf'), float('inf'), float('inf'), float('inf'), float('inf'),
-                          float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf')])
-obj_val, solution = gb_SGD(warm_start, prev_solution, Psi, mu_not, ev_vars, evidence, method,
-                           U_1 / abs(phi_opt1), U_2 / abs(phi_opt2), ev_bounds,
-                           LEARN_RATE=LEARN_RATE, nu=nu, KAPPA=KAPPA, epsilon=epsilon)
-print("Total Time: ", time.time() - start_time)
-print("Objection Function Value: ", obj_val, " at ", solution) #
+    if timeFlag == True:
+        print("Total time:\t", end_time - start_time)
+    if concavityFlag == True:
+        print("U_1-:", b_concave, "\tU_1+:", b_convex)
+
+phi_1opt, phi_2opt = -241747.29447119022, 32906.527971408235
+def zillow_saa(U_1, numSamples, PsiMultiplier, mu_notMultiplier, KAPPA, nu, timeFlag=False, seed=14):
+    np.random.seed(seed)
+    random.seed(seed)
+
+    U_2 = 1 - U_1
+    Psi = (PsiMultiplier * MVG_Sigma)
+    mu_not = mu_notMultiplier * MVG_mu
+
+    #phi_1opt, phi_2opt = saa_phi_opt_est(PsiMultiplier, mu_notMultiplier, KAPPA, nu)
+
+    start_time = time.time()
+    cov_samples = invwishart.rvs(df=nu, scale=Psi, size=numSamples)
+
+    mu_samples = []
+    for cov_sample in cov_samples:
+        mu_samples.append(np.random.multivariate_normal(mu_not, (1 / KAPPA) * cov_sample))
+
+    obj_val, solution, phi_1, phi_2 = gb_SAA(cov_samples, mu_samples, ev_vars, evidence, U_1, U_2, phi_1opt, phi_2opt,
+                                                   ev_bounds=ev_bounds)
+    end_time = time.time()
+    print(U_1, U_2, solution["Z_DV_0"], solution["Z_DV_1"], solution["Z_DV_2"], solution["Z_DV_3"],
+          solution["Z_DV_4"], solution["Z_DV_5"], solution["Z_DV_6"], solution["Z_DV_7"],
+          solution["Z_DV_8"], solution["Z_DV_9"], solution["Z_DV_10"], obj_val, phi_1, phi_2, sep="\t")
+
+    if timeFlag == True:
+        print("Total time:\t", end_time - start_time)
 
 
+def zillow_sgd(U_1, PsiMultiplier, mu_notMultiplier, KAPPA, nu, method, LEARN_RATE, epsilon, timeFlag=False):
+    U_2 = 1 - U_1
+    Psi = PsiMultiplier * MVG_Sigma
+    mu_not = mu_notMultiplier * MVG_mu
+
+    #phi_1opt, phi_2opt = saa_phi_opt_est(PsiMultiplier, mu_notMultiplier, KAPPA, nu)
+    start_time = time.time()
+    warm_start = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    prev_solution = np.array([float('inf'), float('inf'), float('inf'), float('inf'), float('inf'),
+                              float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf')])
+    obj_val, solution = gb_SGD(warm_start, prev_solution, Psi, mu_not, ev_vars, evidence, method,
+                               U_1 / abs(phi_1opt), U_2 / abs(phi_2opt), ev_bounds,
+                               LEARN_RATE=LEARN_RATE, nu=nu, KAPPA=KAPPA, epsilon=epsilon)
+    end_time = time.time()
+    print(U_1, U_2, solution[0], solution[1], solution[2], solution[3], solution[4], solution[5], solution[6],
+          solution[7], solution[8], solution[9], solution[10], obj_val, sep="\t")
+
+    if timeFlag == True:
+        print("Total time:\t", end_time - start_time)
+def saa_phi_opt_est(PsiMultiplier, mu_notMultiplier, KAPPA, nu, J=100000):
+    Psi = PsiMultiplier * MVG_Sigma
+    mu_not = mu_notMultiplier * MVG_mu
+
+    cov_samples = invwishart.rvs(df=nu, scale=Psi, size=J)
+
+    mu_samples = []
+    for cov_sample in cov_samples:
+        mu_samples.append(np.random.multivariate_normal(mu_not, (1 / KAPPA) * cov_sample))
+
+    # Q, vT, c, K_prime, u_prime
+    parameters = []
+    # Convert Sample to normal form
+    for i in range(len(cov_samples)):
+        vals = vals_from_priors(cov_samples[i], mu_samples[i], ev_vars, evidence)
+        parameters.append((vals.Q, vals.vT, vals.c, vals.K_prime, vals.u_prime))  # Note uses canonical formto find Sigmazz^-1 and mu[Z}
+    average_params = np.array(parameters, dtype=object)
+    average_params = average_params.mean(axis=0)
+
+    phi_opt1, phi_opt2 = solve_optimal_weights(average_params[0], average_params[1], average_params[3],
+                                               average_params[4], len(ev_vars), ev_bounds=ev_bounds)
+
+    return phi_opt1, phi_opt2

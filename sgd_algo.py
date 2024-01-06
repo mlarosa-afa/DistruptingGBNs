@@ -9,7 +9,6 @@ def check_gd_bounds(constraint, curr_pos, step):
                 new_pos[i] = constraint[0][i]
         if new_pos[i] < constraint[1][i]:
             new_pos[i] = constraint[1][i]
-    print(new_pos)
     return new_pos
 
 def adaGrad(gradient, constraint, curr_pos, R, learn_rate=0.001, epsilon = 0.0001):
