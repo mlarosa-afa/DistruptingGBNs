@@ -79,11 +79,11 @@ if args[0] in ['Zillow', 'Loan', 'LGSSM']:
 else:
     raise Exception("exampleNum argument passed with invalid option. Valid options: 'Zillow', 'Loan', and 'LGSSM'")
 
-if args[1] in ["white-box", "grey-box-SAA", "grey-box-SGA"]:
+if args[1] in ["white-box", "grey-box-SAA", "grey-box-SGA", 'baseline', 'random']:
     method = args[1]
 else:
     raise Exception(
-        "method argument passed with invalid option. Valid options: 'white-box', 'grey-box-SAA', and 'grey-box-SGA'")
+        "method argument passed with invalid option. Valid options: 'white-box', 'grey-box-SAA', 'grey-box-SGA', 'baseline', and 'random'.")
 
 #Ensures all parameters passed
 if example == "LGSSM" and method == "white-box" and not (len(args) == 4):
@@ -104,6 +104,10 @@ elif method == "grey-box-SGA" and not(example == 'Zillow'):
 elif method == "grey-box-SGA" and not(len(args) >= 10):
     raise Exception(
         "Arguments passed to 'grey-box-SGA' are incorrect. Must include all: u_1, method, Psi coefficent, mu coefficent, Kappa, nu, learn rate, epsilon\n\t where method options are: 1.AdaGrad 2.RMSProp 3.Adam")
+elif method == 'baseline' and not (len(args)==3):raise Exception(
+        "Arguments passed to 'baseline' are incorrect. Must include only: u_1")
+elif method == 'random' and not (len(args)==3):raise Exception(
+        "Arguments passed to 'random' are incorrect. Must include only: u_1")
 
 args = [float(x) for x in args[2:]]
 #checks if a pareto front should be generated
@@ -112,16 +116,17 @@ if pareto:
     quit(1)
 
 if example == 'Zillow':
-    print("SOLUTION:")
-    if method == "white-box":
-        print("U_1\tU_2\tZ_0\tZ_1\tZ_2\tZ_3\tZ_4\tZ_5\tZ_6\tZ_7\tZ_8\tZ_9\tZ_10\tobj_val\tphi_opt1\tphi_opt2")
+    if method == 'baseline':
+        ex1.zillow_baseline(args[0], concavityFlag=concavity, timeFlag=time)
+    elif method == 'random':
+        ex1.zillow_random(args[0], concavityFlag=concavity, timeFlag=time)
+    elif method == "white-box":
         ex1.zillow_wb(args[0], concavityFlag=concavity, timeFlag=time)
     elif method == "grey-box-SAA":
-        print("U_1\tU_2\tZ_0\tZ_1\tZ_2\tZ_3\tZ_4\tZ_5\tZ_6\tZ_7\tZ_8\tZ_9\tZ_10\tobj_val\tphi_opt1\tphi_opt2")
-        ex1.zillow_saa(args[0], int(args[1]), args[2], args[3], args[4], args[5], timeFlag=time)
+        ex1.zillow_saa(args[0], int(args[1]), args[2], args[3], args[4], args[5], concavityFlag=concavity, timeFlag=time)
     elif method == "grey-box-SGA":
-        print("U_1\tU_2\tZ_0\tZ_1\tZ_2\tZ_3\tZ_4\tZ_5\tZ_6\tZ_7\tZ_8\tZ_9\tZ_10\tobj_val")
-        ex1.zillow_sgd(args[0], args[2], args[3], args[4], args[5], int(args[1]), args[6], args[7], timeFlag=time)
+        ex1.zillow_sgd(args[0], args[2], args[3], args[4], args[5], int(args[1]), args[6], args[7], concavityFlag=concavity, timeFlag=time)
+    
 
 if example == 'Loan':
     if method == "white-box":
