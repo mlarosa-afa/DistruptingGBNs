@@ -218,8 +218,7 @@ def saa(U_1, numSamples, risk_tolerance,  concavityFlag=False, timeFlag=False, v
     end_time = time.time()
 
     #Point Estimates for samples
-    MVG_Sigma = np.array(cov_samples).mean(axis=0)
-    MVG_mu = np.array(mu_samples).mean(axis=0)
+    
 
     if verbose:
         print(f"Solution: LGSSM Grey Box (SAA) Attack\n   Parameterized under U_1 = {U_1}, U_2 = {1-U_1}, r_rol = {risk_tolerance}")
@@ -231,6 +230,10 @@ def saa(U_1, numSamples, risk_tolerance,  concavityFlag=False, timeFlag=False, v
         ##########################################
         ###Evaluating GB Solution in WB Setting###
         ##########################################
+        T = int(len(evidence) / 2)
+        MVG_Sigma, MVG_mu = LGSSM_Generate(T, epsilon_var=[.1, .1, .15811, .15811], delta_var=[0.2, 0.2],
+                                       mu_state_init=[0, 0, 2, 1], var_state_init=[.1, .1, .25, .25])
+        
         v_true = vals_from_priors(MVG_Sigma, MVG_mu, ev_vars, evidence)
         #Calculate Normalized Weights
         phi_opt1, phi_opt2 = solve_optimal_weights(v_true.Q, v_true.vT, v_true.K_prime, v_true.u_prime, len(ev_vars), ev_bounds=ev_bounds)

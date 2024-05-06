@@ -203,8 +203,6 @@ def saa(U_1, numSamples, PsiMultiplier, mu_notMultiplier, KAPPA, nu, concavityFl
     end_time = time.time()
 
     #Point Estimates for samples
-    MVG_Sigma = np.array(cov_samples).mean(axis=0)
-    MVG_mu = np.array(mu_samples).mean(axis=0)
 
     if verbose:
         print(f"Solution: Loan Grey Box (SAA) Attack\n   Parameterized under U_1 = {U_1}, U_2 = {1-U_1}, Ψ = {PsiMultiplier}, μ_0 = {mu_notMultiplier}, κ = {KAPPA}, ν = {nu}")
@@ -216,6 +214,10 @@ def saa(U_1, numSamples, PsiMultiplier, mu_notMultiplier, KAPPA, nu, concavityFl
         ##########################################
         ###Evaluating GB Solution in WB Setting###
         ##########################################
+        joint_cov, joint_mu = gen_joint_distributions([MVG_Sigma_evidence], [MVG_mu_evidence], [mu_not_beta], [21.66903])
+        MVG_Sigma = joint_cov[0]
+        MVG_mu = joint_mu[0]
+
         v_true = vals_from_priors(MVG_Sigma, MVG_mu, ev_vars, evidence)
         #Calculate Normalized Weights
         phi_opt1, phi_opt2 = solve_optimal_weights(v_true.Q, v_true.vT, v_true.K_prime, v_true.u_prime, len(ev_vars), ev_bounds=ev_bounds)

@@ -20,23 +20,23 @@ Phi_2             0.514514
 ---------------  ----------
 
 Whitebox Evaluation of Solution
----------------  -----------
-Objective Value  -0.00797968
-Phi_1            -0.507297
-Phi_2             0.499318
----------------  -----------
+---------------  ----------
+Objective Value  -0.0102195
+Phi_1            -0.509906
+Phi_2             0.499687
+---------------  ----------
 
 KL Divergence from True Evidence
 --  -----------
-KL  0.000165563
+KL  5.67061e-05
 --  -----------
 
 Estimates of Unobserved Means
 Variable      Point Estimates    Standard Deviation
 ----------  -----------------  --------------------
-Y_0                   42.7279               152.368
+Y_0                   12.7535                 4.655
 
 Time Analytics
-----------------  --------
-Time Elapsed (s)  0.059242
-----------------  --------
+----------------  -------
+Time Elapsed (s)  0.12678
+----------------  -------
