@@ -1,0 +1,42 @@
+Solution: Loan Grey Box (SAA) Attack
+   Parameterized under U_1 = 0.5, U_2 = 0.5, Ψ = 1.0, μ_0 = 1.0, κ = 5.0, ν = 9.0
+
+Poisioned Attack
+Evidence      Posioned Value
+----------  ----------------
+Z_0                   81
+Z_1                   19.608
+Z_2                   42.644
+Z_3                   12.21
+Z_4                   77.874
+Z_5                   25.2
+Z_6                   94.657
+
+Attack Analytics
+---------------  ----------
+Objective Value   0.0476807
+Phi_1            -0.456165
+Phi_2             0.503845
+---------------  ----------
+
+Whitebox Evaluation of Solution
+---------------  ---------
+Objective Value  -0.126928
+Phi_1            -0.626834
+Phi_2             0.499906
+---------------  ---------
+
+KL Divergence from True Evidence
+--  -----------
+KL  0.000120014
+--  -----------
+
+Estimates of Unobserved Means
+Variable      Point Estimates    Standard Deviation
+----------  -----------------  --------------------
+Y_0                   16.5958                158.04
+
+Time Analytics
+----------------  -------
+Time Elapsed (s)  1.98727
+----------------  -------

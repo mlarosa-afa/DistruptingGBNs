@@ -1,0 +1,49 @@
+Solution: Zillow Grey Box (SAA) Attack
+   Parameterized under U_1 = 0.5, U_2 = 0.5, Ψ = 0.5, μ_0 = 0.5, κ = 1.0, ν = 18.0
+
+Poisioned Attack
+Evidence      Posioned Value
+----------  ----------------
+Z_0                    1.609
+Z_1                    1.065
+Z_2                    1.194
+Z_3                    1.246
+Z_4                    0.841
+Z_5                    1.681
+Z_6                    0.989
+Z_7                    0.917
+Z_8                    0.822
+Z_9                    0.707
+Z_10                   0.388
+
+Attack Analytics
+---------------  ---------
+Objective Value  -0.996189
+Phi_1            -1.12362
+Phi_2             0.127435
+---------------  ---------
+
+Whitebox Evaluation of Solution
+---------------  ---------
+Objective Value  -0.242979
+Phi_1            -0.50753
+Phi_2             0.264551
+---------------  ---------
+
+KL Divergence from True Evidence
+--  -------
+KL  309.905
+--  -------
+
+Estimates of Unobserved Means
+Variable      Point Estimates    Standard Deviation
+----------  -----------------  --------------------
+Y_0                  0.748274            0.0156155
+Y_1                  0.924609            0.00969528
+Y_2                  0.905356            0.00798529
+Y_3                  0.477096            0.0094026
+
+Time Analytics
+----------------  ------
+Time Elapsed (s)  1.8244
+----------------  ------

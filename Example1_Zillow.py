@@ -2,13 +2,11 @@ import random
 
 import numpy as np
 from functions import *
-from wb_attack import whitebox_attack
+from wb_attack import whitebox_attack, whitebox_evaluation
 from baseline_analysis import evaluate_objective, random_attack
 from gb_SAA import gb_SAA, saa_phi_opt_est
 from gb_SGD import gb_SGD
 import time
-import sys
-
 from tabulate import tabulate
 
 """
@@ -123,9 +121,10 @@ def zillow_baseline(U_1, concavityFlag=False, timeFlag=False, verbose=True):
         print(f"Solution: Zillow Baseline Analysis\n   Parameterized under U_1 = {U_1}, U_2 = {1-U_1}")
         print("\nEvidence Analytics")
         print(tabulate([["Objective Value", obj_value]]))
-        print(f"\nPoint Estimates of Unobserved Means")
-        point_estimates = point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, evidence)
-        print(tabulate([["Y_"+str(i), point_estimates[i]] for i in range(len(point_estimates))]))
+        print(f"\nEstimates of Unobserved Means")
+        point_estimates, sd_estimates = point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, evidence)
+        print(tabulate([["Y_"+str(i), point_estimates[i], sd_estimates[i]] for i in range(len(point_estimates))], headers=['Variable', 'Point Estimates', "Standard Deviation"]))
+
 
         if concavityFlag == True:
             print("\nConcavity Analytics")
@@ -150,14 +149,15 @@ def zillow_random(U_1, concavityFlag=False, timeFlag=False, verbose=True, seed=2
     if verbose:
         print(f"Solution: Zillow Random Analysis\n   Parameterized under U_1 = {U_1}, U_2 = {1-U_1}")
         print("\nPoisioned Attack")
-        print(tabulate([["Z_"+str(i), round(solution[i],2)] for i in range(len(solution))], headers=['Evidence', 'Posioned Value']))
+        print(tabulate([["Z_"+str(i), round(solution[i],3)] for i in range(len(solution))], headers=['Evidence', 'Posioned Value']))
         print("\nAttack Analytics")
         print(tabulate([["Objective Value", obj_val],["Phi_1",phi_1],["Phi_2",phi_2]]))
         print(f"\nKL Divergence from True Evidence")
         print(tabulate([["KL", KL_divergence(MVG_Sigma, MVG_mu, ev_vars, evidence, solution)]]))
-        print(f"\nPoint Estimates of Unobserved Means")
-        point_estimates = point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, solution)
-        print(tabulate([["Y_"+str(i), point_estimates[i]] for i in range(len(point_estimates))]))
+        print(f"\nEstimates of Unobserved Means")
+        point_estimates, sd_estimates = point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, solution)
+        print(tabulate([["Y_"+str(i), point_estimates[i], sd_estimates[i]] for i in range(len(point_estimates))], headers=['Variable', 'Point Estimates', "Standard Deviation"]))
+
 
         if concavityFlag == True:
             print("\nConcavity Analytics")
@@ -179,14 +179,14 @@ def zillow_wb(U_1, concavityFlag=False, timeFlag=False, verbose=True):
     if verbose:
         print(f"Solution: Zillow Whitebox Attack\n   Parameterized under U_1 = {U_1}, U_2 = {1-U_1}")
         print("\nPoisioned Attack")
-        print(tabulate([["Z_"+str(i), round(solution[i],2)] for i in range(len(solution))], headers=['Evidence', 'Posioned Value']))
+        print(tabulate([["Z_"+str(i), round(solution[i],3)] for i in range(len(solution))], headers=['Evidence', 'Posioned Value']))
         print("\nAttack Analytics")
         print(tabulate([["Objective Value", obj_val],["Phi_1",phi_1],["Phi_2",phi_2]]))
         print(f"\nKL Divergence from True Evidence")
         print(tabulate([["KL", KL_divergence(MVG_Sigma, MVG_mu, ev_vars, evidence, solution)]]))
-        print(f"\nPoint Estimates of Unobserved Means")
-        point_estimates = point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, solution)
-        print(tabulate([["Y_"+str(i), point_estimates[i]] for i in range(len(point_estimates))]))
+        print(f"\nEstimates of Unobserved Means")
+        point_estimates, sd_estimates = point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, solution)
+        print(tabulate([["Y_"+str(i), point_estimates[i], sd_estimates[i]] for i in range(len(point_estimates))], headers=['Variable', 'Point Estimates', "Standard Deviation"]))
 
         if concavityFlag == True:
             print("\nConcavity Analytics")
@@ -222,14 +222,28 @@ def zillow_saa(U_1, numSamples, PsiMultiplier, mu_notMultiplier, KAPPA, nu, conc
     if verbose:
         print(f"Solution: Zillow Grey Box (SAA) Attack\n   Parameterized under U_1 = {U_1}, U_2 = {1-U_1}, Ψ = {PsiMultiplier}, μ_0 = {mu_notMultiplier}, κ = {KAPPA}, ν = {nu}")
         print("\nPoisioned Attack")
-        print(tabulate([["Z_"+str(i), round(solution[i],2)] for i in range(len(solution))], headers=['Evidence', 'Posioned Value']))
+        print(tabulate([["Z_"+str(i), round(solution[i],3)] for i in range(len(solution))], headers=['Evidence', 'Posioned Value']))
         print("\nAttack Analytics")
         print(tabulate([["Objective Value", obj_val],["Phi_1",phi_1],["Phi_2",phi_2]]))
+
+        ##########################################
+        ###Evaluating GB Solution in WB Setting###
+        ##########################################
+        v_true = vals_from_priors(MVG_Sigma, MVG_mu, ev_vars, evidence)
+        #Calculate Normalized Weights
+        phi_opt1, phi_opt2 = solve_optimal_weights(v_true.Q, v_true.vT, v_true.K_prime, v_true.u_prime, len(ev_vars), ev_bounds=ev_bounds)
+        W_1_true = U_1 / abs(phi_opt1)
+        W_2_true = (1-U_1) / abs(phi_opt2)
+
+        wb_obj, wb_phi_1, wb_phi_2 = whitebox_evaluation(v_true, W_1_true, W_2_true, solution)
+        print(f"\nWhitebox Evaluation of Solution")
+        print(tabulate([["Objective Value", wb_obj],["Phi_1", wb_phi_1],["Phi_2", wb_phi_2]]))
+
         print(f"\nKL Divergence from True Evidence")
         print(tabulate([["KL", KL_divergence(MVG_Sigma, MVG_mu, ev_vars, evidence, solution)]]))
-        print(f"\nPoint Estimates of Unobserved Means")
-        point_estimates = point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, solution)
-        print(tabulate([["Y_"+str(i), point_estimates[i]] for i in range(len(point_estimates))]))
+        print(f"\nEstimates of Unobserved Means")
+        point_estimates, sd_estimates = point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, solution)
+        print(tabulate([["Y_"+str(i), point_estimates[i], sd_estimates[i]] for i in range(len(point_estimates))], headers=['Variable', 'Point Estimates', "Standard Deviation"]))
 
         if concavityFlag == True:
             print("\nConcavity Analytics")
@@ -243,7 +257,7 @@ def zillow_saa(U_1, numSamples, PsiMultiplier, mu_notMultiplier, KAPPA, nu, conc
     return obj_val, solution, phi_1, phi_2
 
 
-def zillow_sgd(U_1, PsiMultiplier, mu_notMultiplier, KAPPA, nu, method, LEARN_RATE, epsilon, concavityFlag=False, timeFlag=False, verbose=True):
+def zillow_sgd(U_1, PsiMultiplier, mu_notMultiplier, KAPPA, nu, method, LEARN_RATE, epsilon, concavityFlag=False, timeFlag=False, verbose=True, seed=42):
     Psi = PsiMultiplier * MVG_Sigma
     mu_not = mu_notMultiplier * MVG_mu
 
@@ -255,7 +269,7 @@ def zillow_sgd(U_1, PsiMultiplier, mu_notMultiplier, KAPPA, nu, method, LEARN_RA
                               float('inf'), float('inf'), float('inf'), float('inf'), float('inf'), float('inf')])
     obj_val, solution, phi_1, phi_2 = gb_SGD(warm_start, prev_solution, Psi, mu_not, ev_vars, evidence, method,
                                U_1 / abs(phi_1opt), (1-U_1) / abs(phi_2opt), ev_bounds,
-                               LEARN_RATE=LEARN_RATE, nu=nu, KAPPA=KAPPA, epsilon=epsilon)
+                               LEARN_RATE=LEARN_RATE, nu=nu, KAPPA=KAPPA, epsilon=epsilon, seed=seed)
     end_time = time.time()
 
     if verbose:
@@ -263,11 +277,28 @@ def zillow_sgd(U_1, PsiMultiplier, mu_notMultiplier, KAPPA, nu, method, LEARN_RA
         print(f"Solution: Zillow Grey Box (SGA) Attack\n   Parameterized under U_1 = {U_1}, U_2 = {1-U_1}, Ψ = {PsiMultiplier}, μ_0 = {mu_notMultiplier}, κ = {KAPPA}, ν = {nu}")
         print(f"\tmethod = {methods[method]}, lr = {LEARN_RATE}, ε  = {epsilon}")
         print("\nPoisioned Attack")
-        print(tabulate([["Z_"+str(i), round(solution[i],2)] for i in range(len(solution))], headers=['Evidence', 'Posioned Value']))
+        print(tabulate([["Z_"+str(i), round(solution[i],4)] for i in range(len(solution))], headers=['Evidence', 'Posioned Value']))
         print("\nAttack Analytics")
         print(tabulate([["Objective Value", obj_val],["Phi_1",phi_1],["Phi_2",phi_2]]))
+
+        ##########################################
+        ###Evaluating GB Solution in WB Setting###
+        ##########################################
+        v_true = vals_from_priors(MVG_Sigma, MVG_mu, ev_vars, evidence)
+        #Calculate Normalized Weights
+        phi_opt1, phi_opt2 = solve_optimal_weights(v_true.Q, v_true.vT, v_true.K_prime, v_true.u_prime, len(ev_vars), ev_bounds=ev_bounds)
+        W_1_true = U_1 / abs(phi_opt1)
+        W_2_true = (1-U_1) / abs(phi_opt2)
+
+        wb_obj, wb_phi_1, wb_phi_2 = whitebox_evaluation(v_true, W_1_true, W_2_true, solution)
+        print(f"\nWhitebox Evaluation of Solution")
+        print(tabulate([["Objective Value", wb_obj],["Phi_1", wb_phi_1],["Phi_2", wb_phi_2]]))
+
         print(f"\nKL Divergence from True Evidence")
         print(tabulate([["KL", KL_divergence(MVG_Sigma, MVG_mu, ev_vars, evidence, solution)]]))
+        print(f"\nEstimates of Unobserved Means")
+        point_estimates, sd_estimates = point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, solution)
+        print(tabulate([["Y_"+str(i), point_estimates[i], sd_estimates[i]] for i in range(len(point_estimates))], headers=['Variable', 'Point Estimates', "Standard Deviation"]))
 
         if concavityFlag == True:
             print("\nConcavity Analytics")

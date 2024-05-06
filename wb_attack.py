@@ -2,6 +2,13 @@ import numpy as np
 from functions import identify_convavity, vals_from_priors, solve_optimal_weights, solveqm
 from baseline_analysis import evaluate_objective
 
+def whitebox_evaluation(v, W_1, W_2, solution):
+    #Solve for Phi_1 which allows to backwards solve for Phi_2 sicne obj is known at this point
+    phi_1 = np.transpose(solution)@(W_1 * v.Q)@solution + np.transpose(solution) @ (W_1*v.vT)
+    phi_2 = np.transpose(solution)@(-1*W_2 * v.K_prime)@solution + (np.transpose(solution) @ (2*W_2*(v.K_prime@v.u_prime)))
+
+    return phi_1 + phi_2, phi_1, phi_2
+
 def whitebox_attack(MVG_Sigma, MVG_mu, ev_cols, true_evidence, U_1, ev_bounds=None, risk_tolerance=.1,
                     optimality_target=3):
     """
@@ -62,7 +69,6 @@ def whitebox_attack(MVG_Sigma, MVG_mu, ev_cols, true_evidence, U_1, ev_bounds=No
     for i in range(len(ev_cols)):
         proposed_evidence = np.append(proposed_evidence, solution["Z_DV_" + str(i)])
 
-    #Solve for Phi_1 which allows to backwards solve for Phi_2 sicne obj is known at this point
-    phi_1 = np.transpose(proposed_evidence)@(W_1 * v.Q)@proposed_evidence + np.transpose(proposed_evidence) @ (W_1*v.vT)
-    
-    return obj_value, proposed_evidence, phi_1, obj_value - phi_1
+    _, phi_1, phi_2 = whitebox_evaluation(v, W_1, W_2, proposed_evidence)
+
+    return obj_value, proposed_evidence, phi_1, phi_2

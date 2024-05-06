@@ -1,9 +1,11 @@
 import numpy as np
 from functions import *
 from scipy.stats import invwishart, invgamma, multivariate_normal
+from baseline_analysis import evaluate_objective, random_attack
 from gb_SAA import gb_SAA
-from wb_attack import whitebox_attack
+from wb_attack import whitebox_attack, whitebox_evaluation
 import time
+from tabulate import tabulate
 
 """
 MVG_Sigma_evidence = np.array([[4.185882e+09, -175182.27926,1410540839.1,563470612.6,6.280136e+09,   2.172400e+08,-8190.29377],
@@ -33,6 +35,7 @@ mu_not_beta = [1.670487e+01, -2.041940e-06, 4.421601e-02, 1.133973e-05, -5.08827
 ev_vars = [0, 1, 2, 3, 4, 5, 6]
 evidence = [90.000, 18.01, 38.767, 11.100, 70.795, 28.000, 92.9]
 ev_bounds = np.stack(([x * 1.1 for x in evidence], [x * 0.9 for x in evidence]))
+
 def gen_joint_distributions(cov_samples_evidence, mu_samples_evidence, beta_samples, errorVar_samples):
     joint_cov = []
     joint_mu = []
@@ -59,35 +62,121 @@ def gen_joint_distributions(cov_samples_evidence, mu_samples_evidence, beta_samp
         joint_cov.append(Sigma)
         joint_mu.append(mu)
     return joint_cov, joint_mu
-def loan_wb(U_1, concavityFlag=False, timeFlag=False):
-    np.random.seed(23)
-    U_2 = 1 - U_1
+
+def loan_baseline(U_1, concavityFlag=False, timeFlag=False, verbose=True):
+    start_time = time.time()
+    cov, mu = gen_joint_distributions([MVG_Sigma_evidence], [MVG_mu_evidence], [mu_not_beta], [21.66903])
+    MVG_Sigma = cov[0]
+    MVG_mu = mu[0]
+    obj_value, phi_1, phi_2 = evaluate_objective(MVG_Sigma, MVG_mu, ev_vars, evidence, evidence, U_1, ev_bounds=ev_bounds)
+    end_time = time.time()
+    
+    if verbose:
+        print(f"Solution: Loan Baseline Analysis\n   Parameterized under U_1 = {U_1}, U_2 = {1-U_1}")
+        print("\nEvidence Analytics")
+        print(tabulate([["Objective Value", obj_value]]))
+        print(f"\nEstimates of Unobserved Means")
+        point_estimates, sd_estimates = point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, evidence)
+        print(tabulate([["Y_"+str(i), point_estimates[i], sd_estimates[i]] for i in range(len(point_estimates))], headers=['Variable', 'Point Estimates', "Standard Deviation"]))
+
+
+        if concavityFlag == True:
+            print("\nConcavity Analytics")
+            b_concave, b_convex = convavity_from_conanical(MVG_Sigma, MVG_mu, ev_vars, evidence, ev_bounds=ev_bounds)
+            print(tabulate([["U_1-", b_concave],["U_1+",b_convex]]))
+            
+        if timeFlag == True:
+            print("\nTime Analytics")
+            print(tabulate([["Time Elapsed (s)", end_time - start_time]]))
+    
+    return obj_value, phi_1, phi_2
+
+def loan_random(U_1, concavityFlag=False, timeFlag=False, verbose=True, seed=2023):
+    np.random.seed(seed)
+    random.seed(seed)
 
     start_time = time.time()
     cov, mu = gen_joint_distributions([MVG_Sigma_evidence], [MVG_mu_evidence], [mu_not_beta], [21.66903])
-    Sigma = cov[0]
-    mu = mu[0]
-
-    b_concave, b_convex, obj_val, solution, phi_opt1, phi_opt2 = whitebox_attack(Sigma, mu, ev_vars, evidence, U_1, U_2, ev_bounds=ev_bounds)
+    MVG_Sigma = cov[0]
+    MVG_mu = mu[0]
+    obj_val, solution, phi_1, phi_2 = random_attack(MVG_Sigma, MVG_mu, ev_vars, evidence, U_1, ev_bounds=ev_bounds)
     end_time = time.time()
-    print(U_1, U_2, solution["Z_DV_0"], solution["Z_DV_1"], solution["Z_DV_2"], solution["Z_DV_3"],
-          solution["Z_DV_4"], solution["Z_DV_5"], solution["Z_DV_6"], obj_val, phi_opt1, phi_opt2, sep="\t")
 
-    if timeFlag == True:
-        print("Total time:\t", end_time - start_time)
-    if concavityFlag == True:
-        print("U_1-:", b_concave, "\tU_2+:", b_convex)
+    #print(f"Objective Value with random attack: {obj_value} \n Utilized random evidence:{proposed_evidence}")
+    if verbose:
+        print(f"Solution: Loan Random Analysis\n   Parameterized under U_1 = {U_1}, U_2 = {1-U_1}")
+        print("\nPoisioned Attack")
+        print(tabulate([["Z_"+str(i), round(solution[i],3)] for i in range(len(solution))], headers=['Evidence', 'Posioned Value']))
+        print("\nAttack Analytics")
+        print(tabulate([["Objective Value", obj_val],["Phi_1",phi_1],["Phi_2",phi_2]]))
+        print(f"\nKL Divergence from True Evidence")
+        print(tabulate([["KL", KL_divergence(MVG_Sigma, MVG_mu, ev_vars, evidence, solution)]]))
+        print(f"\nEstimates of Unobserved Means")
+        point_estimates, sd_estimates = point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, solution)
+        print(tabulate([["Y_"+str(i), point_estimates[i], sd_estimates[i]] for i in range(len(point_estimates))], headers=['Variable', 'Point Estimates', "Standard Deviation"]))
 
-def loan_saa(U_1, numSamples, PsiMultiplier, mu_notMultiplier, KAPPA, nu, timeFlag=False):
-    U_2 = 1 - U_1
+
+        if concavityFlag == True:
+            print("\nConcavity Analytics")
+            b_concave, b_convex = convavity_from_conanical(MVG_Sigma, MVG_mu, ev_vars, evidence, ev_bounds=ev_bounds)
+            print(tabulate([["U_1-", b_concave],["U_1+",b_convex]]))
+            
+        if timeFlag == True:
+            print("\nTime Analytics")
+            print(tabulate([["Time Elapsed (s)", end_time - start_time]]))
+    
+    return obj_val, solution, phi_1, phi_2
+
+def loan_wb(U_1, concavityFlag=False, timeFlag=False, verbose=True):
+
+    start_time = time.time()
+    joint_cov, joint_mu = gen_joint_distributions([MVG_Sigma_evidence], [MVG_mu_evidence], [mu_not_beta], [21.66903])
+    MVG_Sigma = joint_cov[0]
+    MVG_mu = joint_mu[0]
+
+    obj_val, solution, phi_1, phi_2 = whitebox_attack(MVG_Sigma, MVG_mu, ev_vars, evidence, U_1, ev_bounds=ev_bounds)
+    end_time = time.time()
+
+    if verbose:
+        print(f"Solution: Loan Whitebox Attack\n   Parameterized under U_1 = {U_1}, U_2 = {1-U_1}")
+        print("\nPoisioned Attack")
+        print(tabulate([["Z_"+str(i), round(solution[i],3)] for i in range(len(solution))], headers=['Evidence', 'Posioned Value']))
+        print("\nAttack Analytics")
+        print(tabulate([["Objective Value", obj_val],["Phi_1",phi_1],["Phi_2",phi_2]]))
+        print(f"\nKL Divergence from True Evidence")
+        print(tabulate([["KL", KL_divergence(MVG_Sigma, MVG_mu, ev_vars, evidence, solution)]]))
+        print(f"\nEstimates of Unobserved Means")
+        point_estimates, sd_estimates = point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, solution)
+        print(tabulate([["Y_"+str(i), point_estimates[i], sd_estimates[i]] for i in range(len(point_estimates))], headers=['Variable', 'Point Estimates', "Standard Deviation"]))
+
+        if concavityFlag == True:
+            print("\nConcavity Analytics")
+            b_concave, b_convex = convavity_from_conanical(MVG_Sigma, MVG_mu, ev_vars, evidence, ev_bounds=ev_bounds)
+            print(tabulate([["U_1-", b_concave],["U_1+",b_convex]]))
+        
+        if timeFlag == True:
+            print("\nTime Analytics")
+            print(tabulate([["Time Elapsed (s)", end_time - start_time]]))
+
+    return obj_val, solution, phi_1, phi_2
+
+phi_1opt, phi_2opt = -26792.678576447775, 1005.4561732538641
+def loan_saa(U_1, numSamples, PsiMultiplier, mu_notMultiplier, KAPPA, nu, concavityFlag=False, timeFlag=False, verbose=True, seed=2023):
+    np.random.seed(seed)
+    random.seed(seed)
 
     Psi = PsiMultiplier * MVG_Sigma_evidence
     mu_not_evidence = mu_notMultiplier * MVG_mu_evidence
-    # phi_1opt = -26792.678576447775
-    # phi_2opt = 1005.4561732538641
-    phi_1opt, phi_2opt = saa_phi_opt_est(PsiMultiplier, mu_notMultiplier, KAPPA, nu)
 
     start_time = time.time()
+    #cov, mu = gen_joint_distributions([MVG_Sigma_evidence], [MVG_mu_evidence], [mu_not_beta], [21.66903])
+    #MVG_Sigma = cov[0]
+    #MVG_mu = mu[0]
+    #phi_1opt, phi_2opt = saa_phi_opt_est(MVG_Sigma, MVG_mu, ev_vars, evidence, ev_bounds, PsiMultiplier, mu_notMultiplier, KAPPA, nu)
+
+    #################
+    ###Sample Data###
+    #################
 
     #Cov/Mu for Evidence
     cov_samples_evidence = invwishart.rvs(nu, Psi, size=numSamples)
@@ -98,21 +187,61 @@ def loan_saa(U_1, numSamples, PsiMultiplier, mu_notMultiplier, KAPPA, nu, timeFl
     #Sample LR Error
     errorVar_samples = invgamma.rvs(4, loc=0, scale=2, size=numSamples)
 
-    #will need to change beta to static vars
+    #Sample Beta
     beta_samples = []
     for i in range(numSamples):
         beta_cov_matrix = np.eye(8) * errorVar_samples[i]
         beta_samples.append(np.random.multivariate_normal(mu_not_beta, beta_cov_matrix))
 
-    jcov, jmu = gen_joint_distributions(cov_samples_evidence, mu_samples_evidence, beta_samples, errorVar_samples)
+    ##################
+    ###Obtain Joint###
+    ##################
 
-    obj_val, solution, phi_1, phi_2 = gb_SAA(jcov, jmu, ev_vars, evidence, U_1, U_2, phi_1opt, phi_2opt, ev_bounds=ev_bounds)
+    cov_samples, mu_samples = gen_joint_distributions(cov_samples_evidence, mu_samples_evidence, beta_samples, errorVar_samples)
+
+    obj_val, solution, phi_1, phi_2 = gb_SAA(cov_samples, mu_samples, ev_vars, evidence, U_1/abs(phi_1opt), (1-U_1)/abs(phi_2opt), ev_bounds=ev_bounds)
     end_time = time.time()
-    print(U_1, U_2, solution["Z_DV_0"], solution["Z_DV_1"], solution["Z_DV_2"], solution["Z_DV_3"],
-          solution["Z_DV_4"], solution["Z_DV_5"], solution["Z_DV_6"], obj_val, phi_1, phi_2, sep="\t")
 
-    if timeFlag == True:
-        print("Total time:\t", end_time - start_time)
+    #Point Estimates for samples
+    MVG_Sigma = np.array(cov_samples).mean(axis=0)
+    MVG_mu = np.array(mu_samples).mean(axis=0)
+
+    if verbose:
+        print(f"Solution: Loan Grey Box (SAA) Attack\n   Parameterized under U_1 = {U_1}, U_2 = {1-U_1}, Ψ = {PsiMultiplier}, μ_0 = {mu_notMultiplier}, κ = {KAPPA}, ν = {nu}")
+        print("\nPoisioned Attack")
+        print(tabulate([["Z_"+str(i), round(solution[i],3)] for i in range(len(solution))], headers=['Evidence', 'Posioned Value']))
+        print("\nAttack Analytics")
+        print(tabulate([["Objective Value", obj_val],["Phi_1",phi_1],["Phi_2",phi_2]]))
+
+        ##########################################
+        ###Evaluating GB Solution in WB Setting###
+        ##########################################
+        v_true = vals_from_priors(MVG_Sigma, MVG_mu, ev_vars, evidence)
+        #Calculate Normalized Weights
+        phi_opt1, phi_opt2 = solve_optimal_weights(v_true.Q, v_true.vT, v_true.K_prime, v_true.u_prime, len(ev_vars), ev_bounds=ev_bounds)
+        W_1_true = U_1 / abs(phi_opt1)
+        W_2_true = (1-U_1) / abs(phi_opt2)
+
+        wb_obj, wb_phi_1, wb_phi_2 = whitebox_evaluation(v_true, W_1_true, W_2_true, solution)
+        print(f"\nWhitebox Evaluation of Solution")
+        print(tabulate([["Objective Value", wb_obj],["Phi_1", wb_phi_1],["Phi_2", wb_phi_2]]))
+
+        print(f"\nKL Divergence from True Evidence")
+        print(tabulate([["KL", KL_divergence(MVG_Sigma, MVG_mu, ev_vars, evidence, solution)]]))
+        print(f"\nEstimates of Unobserved Means")
+        point_estimates, sd_estimates = point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, solution)
+        print(tabulate([["Y_"+str(i), point_estimates[i], sd_estimates[i]] for i in range(len(point_estimates))], headers=['Variable', 'Point Estimates', "Standard Deviation"]))
+
+        if concavityFlag == True:
+            print("\nConcavity Analytics")
+            b_concave, b_convex = convavity_from_conanical(MVG_Sigma, MVG_mu, ev_vars, evidence, ev_bounds=ev_bounds)
+            print(tabulate([["U_1-", b_concave],["U_1+",b_convex]]))
+        
+        if timeFlag == True:
+            print("\nTime Analytics")
+            print(tabulate([["Time Elapsed (s)", end_time - start_time]]))
+
+    return obj_val, solution, phi_1, phi_2
 
 def saa_phi_opt_est(PsiMultiplier, mu_notMultiplier, KAPPA, nu, J=1000):
     Psi = PsiMultiplier * MVG_Sigma_evidence

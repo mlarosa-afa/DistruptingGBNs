@@ -1,0 +1,50 @@
+Solution: Zillow Grey Box (SGA) Attack
+   Parameterized under U_1 = 0.5, U_2 = 0.5, Ψ = 1.0, μ_0 = 1.0, κ = 5.0, ν = 17.0
+	method = RMSProp, lr = 0.0005, ε  = 1e-06
+
+Poisioned Attack
+Evidence      Posioned Value
+----------  ----------------
+Z_0                   1.5443
+Z_1                   1.0645
+Z_2                   1.1941
+Z_3                   1.5273
+Z_4                   0.8135
+Z_5                   1.6813
+Z_6                   0.8859
+Z_7                   0.9168
+Z_8                   0.6902
+Z_9                   0.7068
+Z_10                  0.4892
+
+Attack Analytics
+---------------  ---------
+Objective Value  -0.146523
+Phi_1            -0.627021
+Phi_2             0.480498
+---------------  ---------
+
+Whitebox Evaluation of Solution
+---------------  ---------
+Objective Value  -0.12495
+Phi_1            -0.601203
+Phi_2             0.476253
+---------------  ---------
+
+KL Divergence from True Evidence
+--  -------
+KL  205.551
+--  -------
+
+Estimates of Unobserved Means
+Variable      Point Estimates    Standard Deviation
+----------  -----------------  --------------------
+Y_0                  0.906841            0.0156155
+Y_1                  0.69414             0.00969528
+Y_2                  0.803803            0.00798529
+Y_3                  0.52912             0.0094026
+
+Time Analytics
+----------------  -------
+Time Elapsed (s)  43.1732
+----------------  -------

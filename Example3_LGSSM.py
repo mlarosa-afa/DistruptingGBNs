@@ -2,8 +2,11 @@ import numpy as np
 from scipy.stats import invgamma, multivariate_normal
 from functions import solve_optimal_weights, vals_from_priors
 from gb_SAA import gb_SAA
-from wb_attack import whitebox_attack
+from wb_attack import whitebox_attack, evaluate_objective, whitebox_evaluation
+from functions import *
 import time
+from tabulate import tabulate
+from baseline_analysis import random_attack
 
 np.random.seed(100)
 evidence = [0.1, 0.2, 1.9, 1.1, 3.8, 2.3, 6.1, 3.1, 7.9, 4.2, 10.1, 5.1, 12.2, 5.9, 13.9, 7.1, 15.9, 8.2,
@@ -48,7 +51,7 @@ def LGSSM_Generate(T, epsilon_var=None, delta_var=None, mu_state_init=None, var_
         beta[6 * t + 4, 6 * t] = 1
         beta[6 * t + 5, 6 * t + 1] = 1
 
-    mu = np.zeros((6 * (T + 1), 1))  # Initialize
+    mu = np.zeros((6 * (T + 1)))  # Initialize
 
     # Find mu of joint PDF -- loop thru Koller's recursion
     for t in range(T + 1):
@@ -103,31 +106,106 @@ def LGSSM_Generate(T, epsilon_var=None, delta_var=None, mu_state_init=None, var_
 
     return Sigma, mu
 
-def lgssm_wb(U_1, risk_tolerance, concavityFlag=False, timeFlag=False):
-    U_2 = 1 - U_1
+def lgssm_baseline(U_1, risk_tolerance, concavityFlag=False, timeFlag=False, verbose=True):
+    start_time = time.time()
+    MVG_Sigma, MVG_mu = LGSSM_Generate(T, epsilon_var=[.1, .1, .15811, .15811], delta_var=[0.2, 0.2],
+                                       mu_state_init=[0, 0, 2, 1], var_state_init=[.1, .1, .25, .25])
+    obj_value, phi_1, phi_2 = evaluate_objective(MVG_Sigma, MVG_mu, ev_vars, evidence, evidence, U_1, risk_tolerance=risk_tolerance)
+    end_time = time.time()
+    
+    if verbose:
+        print(f"Solution: LGSSM Baseline Analysis\n   Parameterized under U_1 = {U_1}, U_2 = {1-U_1}")
+        print("\nEvidence Analytics")
+        print(tabulate([["Objective Value", obj_value]]))
+        print(f"\nEstimates of Unobserved Means")
+        point_estimates, sd_estimates = point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, evidence)
+        print(tabulate([["Y_"+str(i), point_estimates[i], sd_estimates[i]] for i in range(len(point_estimates))], headers=['Variable', 'Point Estimates', "Standard Deviation"]))
+
+        if concavityFlag == True:
+            print("\nConcavity Analytics")
+            b_concave, b_convex = convavity_from_conanical(MVG_Sigma, MVG_mu, ev_vars, evidence, risk_tolerance=risk_tolerance)
+            print(tabulate([["U_1-", b_concave],["U_1+",b_convex]]))
+            
+        if timeFlag == True:
+            print("\nTime Analytics")
+            print(tabulate([["Time Elapsed (s)", end_time - start_time]]))
+    
+    return obj_value, phi_1, phi_2
+
+def lgssm_random(U_1, risk_tolerance, concavityFlag=False, timeFlag=False, verbose=True, seed=2023):
+    np.random.seed(seed)
+    random.seed(seed)
+
+    start_time = time.time()
+    MVG_Sigma, MVG_mu = LGSSM_Generate(T, epsilon_var=[.1, .1, .15811, .15811], delta_var=[0.2, 0.2],
+                                       mu_state_init=[0, 0, 2, 1], var_state_init=[.1, .1, .25, .25])
+    obj_val, solution, phi_1, phi_2 = random_attack(MVG_Sigma, MVG_mu, ev_vars, evidence, U_1, risk_tolerance=risk_tolerance)
+    end_time = time.time()
+
+    #print(f"Objective Value with random attack: {obj_value} \n Utilized random evidence:{proposed_evidence}")
+    if verbose:
+        print(f"Solution: LGSSM Random Analysis\n   Parameterized under U_1 = {U_1}, U_2 = {1-U_1}")
+        print("\nPoisioned Attack")
+        print(tabulate([["Z_"+str(i), round(solution[i],3)] for i in range(len(solution))], headers=['Evidence', 'Posioned Value']))
+        print("\nAttack Analytics")
+        print(tabulate([["Objective Value", obj_val],["Phi_1",phi_1],["Phi_2",phi_2]]))
+        print(f"\nKL Divergence from True Evidence")
+        print(tabulate([["KL", KL_divergence(MVG_Sigma, MVG_mu, ev_vars, evidence, solution)]]))
+        print(f"\nEstimates of Unobserved Means")
+        point_estimates, sd_estimates = point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, evidence)
+        print(tabulate([["Y_"+str(i), point_estimates[i], sd_estimates[i]] for i in range(len(point_estimates))], headers=['Variable', 'Point Estimates', "Standard Deviation"]))
+
+        if concavityFlag == True:
+            print("\nConcavity Analytics")
+            b_concave, b_convex = convavity_from_conanical(MVG_Sigma, MVG_mu, ev_vars, evidence, risk_tolerance=risk_tolerance)
+            print(tabulate([["U_1-", b_concave],["U_1+",b_convex]]))
+            
+        if timeFlag == True:
+            print("\nTime Analytics")
+            print(tabulate([["Time Elapsed (s)", end_time - start_time]]))
+    
+    return obj_val, solution, phi_1, phi_2
+
+def lgssm_wb(U_1, risk_tolerance, concavityFlag=False, timeFlag=False, verbose=True):
+    ev_bounds = np.stack(([x * (1+risk_tolerance) for x in evidence], [x * (1-risk_tolerance) for x in evidence]))
+
     # build LG-SSM based off of evidence
     start_time = time.time()
     T = int(len(evidence) / 2)
     MVG_Sigma, MVG_mu = LGSSM_Generate(T, epsilon_var=[.1, .1, .15811, .15811], delta_var=[0.2, 0.2],
                                        mu_state_init=[0, 0, 2, 1], var_state_init=[.1, .1, .25, .25])
 
-    b_concave, b_convex, obj_val, solution, phi_1, phi_2 = whitebox_attack(MVG_Sigma, MVG_mu, ev_vars, evidence, U_1,
-                                                                           U_2, risk_tolerance=risk_tolerance)
+    obj_val, solution, phi_1, phi_2 = whitebox_attack(MVG_Sigma, MVG_mu, ev_vars, evidence, U_1, ev_bounds=ev_bounds)
     end_time = time.time()
-    print(U_1, U_2, sep="\t", end="\t")
-    for i in range(len(evidence)):
-        print(solution["Z_DV_" + str(i)], end="\t")
-    print(obj_val, phi_1, phi_2, sep="\t")
 
-    if timeFlag == True:
-        print("Total time:\t", end_time - start_time)
-    if concavityFlag == True:
-        print("U_1-:", b_concave, "\tU_1+:", b_convex)
+    if verbose:
+        print(f"Solution: LGSSM Whitebox Attack\n   Parameterized under U_1 = {U_1}, U_2 = {1-U_1}")
+        print("\nPoisioned Attack")
+        print(tabulate([["Z_"+str(i), round(solution[i],3)] for i in range(len(solution))], headers=['Evidence', 'Posioned Value']))
+        print("\nAttack Analytics")
+        print(tabulate([["Objective Value", obj_val],["Phi_1",phi_1],["Phi_2",phi_2]]))
+        print(f"\nKL Divergence from True Evidence")
+        print(tabulate([["KL", KL_divergence(MVG_Sigma, MVG_mu, ev_vars, evidence, solution)]]))
+        print(f"\nPoint Estimates of Unobserved Means")
+        point_estimates, sd_estimates = point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, solution)
+        print(tabulate([["Y_"+str(i), point_estimates[i], sd_estimates[i]] for i in range(len(point_estimates))], headers=['Variable', 'Point Estimates', "Standard Deviation"]))
 
-def lgssm_saa(U_1, numSamples, risk_tolerance, timeFlag=False):
-    phi_1opt, phi_2opt = saa_phi_opt_est(risk_tolerance=risk_tolerance)
-    #phi_1opt, phi_2opt = 26431474.87572283, 29.634639300644544
-    U_2 = 1 - U_1
+        if concavityFlag == True:
+            print("\nConcavity Analytics")
+            b_concave, b_convex = convavity_from_conanical(MVG_Sigma, MVG_mu, ev_vars, evidence, ev_bounds=ev_bounds)
+            print(tabulate([["U_1-", b_concave],["U_1+",b_convex]]))
+        
+        if timeFlag == True:
+            print("\nTime Analytics")
+            print(tabulate([["Time Elapsed (s)", end_time - start_time]]))
+
+    return obj_val, solution, phi_1, phi_2
+
+phi_1opt, phi_2opt = 26431474.87572283, 29.634639300644544
+def lgssm_saa(U_1, numSamples, risk_tolerance,  concavityFlag=False, timeFlag=False, verbose=True):
+    ev_bounds = np.stack(([x * (1+risk_tolerance) for x in evidence], [x * (1-risk_tolerance) for x in evidence]))
+    #phi_1opt, phi_2opt = saa_phi_opt_est(risk_tolerance=risk_tolerance)
+
     start_time = time.time()
     cov_samples = []
     mu_samples = []
@@ -136,15 +214,54 @@ def lgssm_saa(U_1, numSamples, risk_tolerance, timeFlag=False):
         cov_samples.append(cov_sample)
         mu_samples.append(mu_sample)
 
-    obj_val, solution, phi_1, phi_2 = gb_SAA(cov_samples, mu_samples, ev_vars, evidence, U_1, U_2, phi_1opt, phi_2opt, risk_tolerance=risk_tolerance)
+    obj_val, solution, phi_1, phi_2 = gb_SAA(cov_samples, mu_samples, ev_vars, evidence, U_1/ abs(phi_1opt), (1-U_1)/abs(phi_2opt), ev_bounds=ev_bounds)
     end_time = time.time()
-    print(U_1, U_2, end="\t")
-    for i in range(len(evidence)):
-        print(solution["Z_DV_" + str(i)], end="\t")
-    print(obj_val, phi_1, phi_2, sep="\t")
 
-    if timeFlag == True:
-        print("Total time:\t", end_time - start_time)
+    #Point Estimates for samples
+    MVG_Sigma = np.array(cov_samples).mean(axis=0)
+    MVG_mu = np.array(mu_samples).mean(axis=0)
+
+    if verbose:
+        print(f"Solution: LGSSM Grey Box (SAA) Attack\n   Parameterized under U_1 = {U_1}, U_2 = {1-U_1}, r_rol = {risk_tolerance}")
+        print("\nPoisioned Attack")
+        print(tabulate([["Z_"+str(i), round(solution[i],3)] for i in range(len(solution))], headers=['Evidence', 'Posioned Value']))
+        print("\nAttack Analytics")
+        print(tabulate([["Objective Value", obj_val],["Phi_1",phi_1],["Phi_2",phi_2]]))
+
+        ##########################################
+        ###Evaluating GB Solution in WB Setting###
+        ##########################################
+        v_true = vals_from_priors(MVG_Sigma, MVG_mu, ev_vars, evidence)
+        #Calculate Normalized Weights
+        phi_opt1, phi_opt2 = solve_optimal_weights(v_true.Q, v_true.vT, v_true.K_prime, v_true.u_prime, len(ev_vars), ev_bounds=ev_bounds)
+        W_1_true = U_1 / abs(phi_opt1)
+        W_2_true = (1-U_1) / abs(phi_opt2)
+
+        wb_obj, wb_phi_1, wb_phi_2 = whitebox_evaluation(v_true, W_1_true, W_2_true, solution)
+        print(f"\nWhitebox Evaluation of Solution")
+        print(tabulate([["Objective Value", wb_obj],["Phi_1", wb_phi_1],["Phi_2", wb_phi_2]]))
+
+        print(f"\nKL Divergence from True Evidence")
+        print(tabulate([["KL", KL_divergence(MVG_Sigma, MVG_mu, ev_vars, evidence, solution)]]))
+        print(f"\nEstimates of Unobserved Means")
+        point_estimates, sd_estimates = point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, solution)
+        print(tabulate([["Y_"+str(i), point_estimates[i], sd_estimates[i]] for i in range(len(point_estimates))], headers=['Variable', 'Point Estimates', "Standard Deviation"]))
+
+        if concavityFlag == True:
+            print("\nConcavity Analytics")
+            b_concave, b_convex = convavity_from_conanical(MVG_Sigma, MVG_mu, ev_vars, evidence, ev_bounds=ev_bounds)
+            print(tabulate([["U_1-", b_concave],["U_1+",b_convex]]))
+        
+        if timeFlag == True:
+            print("\nTime Analytics")
+            print(tabulate([["Time Elapsed (s)", end_time - start_time]]))
+
+    return obj_val, solution, phi_1, phi_2
+    
+
+
+
+
 def saa_phi_opt_est(J=1000, risk_tolerance = 0.1):
     cov_samples = []
     mu_samples = []

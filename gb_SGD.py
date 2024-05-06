@@ -4,7 +4,7 @@ from copy import copy
 from functions import *
 from sgd_algo import adaGrad, RMSProp, adam
 
-def gb_SGD(solution, prev_solution, Psi, mu_not, ev_vars, evidence, method, W_1, W_2, constraint= None, risk_tolerance = .1, LEARN_RATE = .8, seed=12, nu = 100, KAPPA=4, error = .01, epsilon = 0.0001):
+def gb_SGD(solution, prev_solution, Psi, mu_not, ev_vars, evidence, method, W_1, W_2, constraint= None, risk_tolerance = .1, LEARN_RATE = .8, seed=42, nu = 100, KAPPA=4, error = .01, epsilon = 0.0001):
 
     if constraint is None:
         constraint = np.stack(([x * (1 + risk_tolerance) for x in evidence], [x * (1 - risk_tolerance) for x in evidence]))

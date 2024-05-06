@@ -69,7 +69,7 @@ def gb_SAA(cov_samples, mu_samples, ev_cols, evidence, W_1, W_2, ev_bounds = Non
 
     #calculate phi1. We can obtain phi_2 = obj_val - phi_1
     phi_1 = np.transpose(proposed_evidence) @ (W_1 * average_params[0]) @ proposed_evidence + np.transpose(proposed_evidence) @ (W_1*average_params[1])
-
+    
     return obj_value, proposed_evidence, phi_1, obj_value-phi_1
 
 

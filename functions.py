@@ -205,6 +205,7 @@ def point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, evidence):
 
     Sigma_zz = MVG_Sigma[ev_vars][:,ev_vars]
     Sigma_yz = MVG_Sigma[unobserved_vars][:,ev_vars]
+    Sigma_yy = MVG_Sigma[unobserved_vars][:,unobserved_vars]
 
     mu_y = MVG_mu[unobserved_vars]
     mu_z = MVG_mu[ev_vars]
@@ -212,6 +213,7 @@ def point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, evidence):
     Sigma_zz_inv = np.linalg.inv(Sigma_zz)
 
     cond_mu = mu_y + Sigma_yz@Sigma_zz_inv@(evidence-mu_z)
-
-    return cond_mu
+    cond_Sigma = Sigma_yy - Sigma_yz @ Sigma_zz_inv @ np.transpose(Sigma_yz)
+    
+    return cond_mu, np.sqrt(np.diag(cond_Sigma))
     

@@ -1,0 +1,35 @@
+Solution: Loan Whitebox Attack
+   Parameterized under U_1 = 0.5, U_2 = 0.5
+
+Poisioned Attack
+Evidence      Posioned Value
+----------  ----------------
+Z_0                    81
+Z_1                    16.21
+Z_2                    38.27
+Z_3                    12.21
+Z_4                    77.87
+Z_5                    25.2
+Z_6                   102.19
+
+Attack Analytics
+---------------  -----------
+Objective Value  -0.00402859
+Phi_1            -0.500003
+Phi_2             0.495974
+---------------  -----------
+
+KL Divergence from True Evidence
+--  ----------
+KL  0.00703371
+--  ----------
+
+Estimates of Unobserved Means
+Variable      Point Estimates    Standard Deviation
+----------  -----------------  --------------------
+Y_0                   12.1433                 4.655
+
+Time Analytics
+----------------  --------
+Time Elapsed (s)  0.123922
+----------------  --------

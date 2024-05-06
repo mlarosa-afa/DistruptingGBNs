@@ -59,7 +59,7 @@ pareto = False
 
 for opt, arg in opts:
     if opt == "-v" or opt == "--version":
-        print("0.1.0")
+        print("0.2.0")
         quit(1)
     if opt == "-h" or opt == "--help":
         print(help)
@@ -86,10 +86,10 @@ else:
         "method argument passed with invalid option. Valid options: 'white-box', 'grey-box-SAA', 'grey-box-SGA', 'baseline', and 'random'.")
 
 #Ensures all parameters passed
-if example == "LGSSM" and method == "white-box" and not (len(args) == 4):
+if example == "LGSSM" and method in ["white-box", "random", "baseline"] and not (len(args) == 4):
     raise Exception(
         "Arguments passed to 'white-box' for 'LGSSM' are incorrect. Must include only: u_1, risk_tolerance")
-elif not(example=="LGSSM") and method == "white-box" and not (len(args) == 3):
+elif not(example=="LGSSM") and method in ["white-box", "random", "baseline"] and not (len(args) == 3):
     raise Exception(
         "Arguments passed to 'white-box' are incorrect. Must include only: u_1")
 elif example == "LGSSM" and method == "grey-box-SAA" and not(len(args) == 5):
@@ -104,10 +104,6 @@ elif method == "grey-box-SGA" and not(example == 'Zillow'):
 elif method == "grey-box-SGA" and not(len(args) >= 10):
     raise Exception(
         "Arguments passed to 'grey-box-SGA' are incorrect. Must include all: u_1, method, Psi coefficent, mu coefficent, Kappa, nu, learn rate, epsilon\n\t where method options are: 1.AdaGrad 2.RMSProp 3.Adam")
-elif method == 'baseline' and not (len(args)==3):raise Exception(
-        "Arguments passed to 'baseline' are incorrect. Must include only: u_1")
-elif method == 'random' and not (len(args)==3):raise Exception(
-        "Arguments passed to 'random' are incorrect. Must include only: u_1")
 
 args = [float(x) for x in args[2:]]
 #checks if a pareto front should be generated
@@ -129,29 +125,27 @@ if example == 'Zillow':
     
 
 if example == 'Loan':
-    if method == "white-box":
-        print("SOLUTION:")
-        print("U_1\tU_2\tZ_0\tZ_1\tZ_2\tZ_3\tZ_4\tZ_5\tZ_6\tobj_val\tphi_opt1\tphi_opt2")
+    if method == 'baseline':
+        ex2.loan_baseline(args[0], concavityFlag=concavity, timeFlag=time)
+    elif method == 'random':
+        ex2.loan_random(args[0], concavityFlag=concavity, timeFlag=time)
+    elif method == "white-box":
         ex2.loan_wb(args[0], concavityFlag=concavity, timeFlag=time)
     elif method == "grey-box-SAA":
-        print("SOLUTION:")
-        print("U_1\tU_2\tZ_0\tZ_1\tZ_2\tZ_3\tZ_4\tZ_5\tZ_6\tobj_val\tphi_opt1\tphi_opt2")
-        ex2.loan_saa(args[0], int(args[1]), args[2], args[3], args[4], args[5], timeFlag=time)
+        ex2.loan_saa(args[0], int(args[1]), args[2], args[3], args[4], args[5], concavityFlag=concavity, timeFlag=time)
     elif method == "grey-box-SGA":
-        print("This method is currently unavailable for Loan data set.")
+        print("This method is currently unavailable for Loan dataset.")
         quit(1)
 
 if example == 'LGSSM':
-    if method == "white-box":
-        print("SOLUTION:")
-        print("U_1\tU_2\tZ_0\tZ_1\tZ_2\tZ_3\tZ_4\tZ_5\tZ_6\tZ_7\tZ_8\tZ_9\tZ_10"
-              "\tZ_11\tZ_12\tZ_13\tZ_14\tZ_15\tZ_16\tZ_17\tZ_18\tZ_19\tZ_20\tobj_val\tphi_opt1\tphi_opt2")
+    if method == 'baseline':
+        ex3.lgssm_baseline(args[0], args[1], concavityFlag=concavity, timeFlag=time)
+    elif method == 'random':
+        ex3.lgssm_random(args[0], args[1], concavityFlag=concavity, timeFlag=time)
+    elif method == "white-box":
         ex3.lgssm_wb(args[0], args[1], concavityFlag=concavity, timeFlag=time)
     elif method == "grey-box-SAA":
-        print("SOLUTION:")
-        print("U_1\tU_2\tZ_0\tZ_1\tZ_2\tZ_3\tZ_4\tZ_5\tZ_6\tZ_7\tZ_8\tZ_9\tZ_10"
-              "\tZ_11\tZ_12\tZ_13\tZ_14\tZ_15\tZ_16\tZ_17\tZ_18\tZ_19\tZ_20\tobj_val\tphi_opt1\tphi_opt2")
-        ex3.lgssm_saa(args[0], int(args[1]), args[2],  timeFlag=time)
+        ex3.lgssm_saa(args[0], int(args[1]), args[2], concavityFlag=concavity, timeFlag=time)
     elif method == "grey-box-SGA":
-        print("This method is currently unavailable for LGSSM data set.")
+        print("This method is currently unavailable for LGSSM dataset.")
         quit(1)
