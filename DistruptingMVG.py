@@ -113,39 +113,39 @@ if pareto:
 
 if example == 'Zillow':
     if method == 'baseline':
-        ex1.zillow_baseline(args[0], concavityFlag=concavity, timeFlag=time)
+        ex1.baseline(args[0], concavityFlag=concavity, timeFlag=time)
     elif method == 'random':
-        ex1.zillow_random(args[0], concavityFlag=concavity, timeFlag=time)
+        ex1.inst_random(args[0], concavityFlag=concavity, timeFlag=time)
     elif method == "white-box":
-        ex1.zillow_wb(args[0], concavityFlag=concavity, timeFlag=time)
+        ex1.wb(args[0], concavityFlag=concavity, timeFlag=time)
     elif method == "grey-box-SAA":
-        ex1.zillow_saa(args[0], int(args[1]), args[2], args[3], args[4], args[5], concavityFlag=concavity, timeFlag=time)
+        ex1.saa(args[0], int(args[1]), args[2], args[3], args[4], args[5], concavityFlag=concavity, timeFlag=time)
     elif method == "grey-box-SGA":
-        ex1.zillow_sgd(args[0], args[2], args[3], args[4], args[5], int(args[1]), args[6], args[7], concavityFlag=concavity, timeFlag=time)
+        ex1.sgd(args[0], args[2], args[3], args[4], args[5], int(args[1]), args[6], args[7], concavityFlag=concavity, timeFlag=time)
     
 
 if example == 'Loan':
     if method == 'baseline':
-        ex2.loan_baseline(args[0], concavityFlag=concavity, timeFlag=time)
+        ex2.baseline(args[0], concavityFlag=concavity, timeFlag=time)
     elif method == 'random':
-        ex2.loan_random(args[0], concavityFlag=concavity, timeFlag=time)
+        ex2.inst_random(args[0], concavityFlag=concavity, timeFlag=time)
     elif method == "white-box":
-        ex2.loan_wb(args[0], concavityFlag=concavity, timeFlag=time)
+        ex2.wb(args[0], concavityFlag=concavity, timeFlag=time)
     elif method == "grey-box-SAA":
-        ex2.loan_saa(args[0], int(args[1]), args[2], args[3], args[4], args[5], concavityFlag=concavity, timeFlag=time)
+        ex2.saa(args[0], int(args[1]), args[2], args[3], args[4], args[5], concavityFlag=concavity, timeFlag=time)
     elif method == "grey-box-SGA":
         print("This method is currently unavailable for Loan dataset.")
         quit(1)
 
 if example == 'LGSSM':
     if method == 'baseline':
-        ex3.lgssm_baseline(args[0], args[1], concavityFlag=concavity, timeFlag=time)
+        ex3.baseline(args[0], args[1], concavityFlag=concavity, timeFlag=time)
     elif method == 'random':
-        ex3.lgssm_random(args[0], args[1], concavityFlag=concavity, timeFlag=time)
+        ex3.inst_random(args[0], args[1], concavityFlag=concavity, timeFlag=time)
     elif method == "white-box":
-        ex3.lgssm_wb(args[0], args[1], concavityFlag=concavity, timeFlag=time)
+        ex3.wb(args[0], args[1], concavityFlag=concavity, timeFlag=time)
     elif method == "grey-box-SAA":
-        ex3.lgssm_saa(args[0], int(args[1]), args[2], concavityFlag=concavity, timeFlag=time)
+        ex3.saa(args[0], int(args[1]), args[2], concavityFlag=concavity, timeFlag=time)
     elif method == "grey-box-SGA":
         print("This method is currently unavailable for LGSSM dataset.")
         quit(1)

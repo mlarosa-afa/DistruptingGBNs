@@ -106,7 +106,7 @@ def LGSSM_Generate(T, epsilon_var=None, delta_var=None, mu_state_init=None, var_
 
     return Sigma, mu
 
-def lgssm_baseline(U_1, risk_tolerance, concavityFlag=False, timeFlag=False, verbose=True):
+def baseline(U_1, risk_tolerance, concavityFlag=False, timeFlag=False, verbose=True):
     start_time = time.time()
     MVG_Sigma, MVG_mu = LGSSM_Generate(T, epsilon_var=[.1, .1, .15811, .15811], delta_var=[0.2, 0.2],
                                        mu_state_init=[0, 0, 2, 1], var_state_init=[.1, .1, .25, .25])
@@ -132,7 +132,7 @@ def lgssm_baseline(U_1, risk_tolerance, concavityFlag=False, timeFlag=False, ver
     
     return obj_value, phi_1, phi_2
 
-def lgssm_random(U_1, risk_tolerance, concavityFlag=False, timeFlag=False, verbose=True, seed=2023):
+def inst_random(U_1, risk_tolerance, concavityFlag=False, timeFlag=False, verbose=True, seed=2023):
     np.random.seed(seed)
     random.seed(seed)
 
@@ -166,7 +166,7 @@ def lgssm_random(U_1, risk_tolerance, concavityFlag=False, timeFlag=False, verbo
     
     return obj_val, solution, phi_1, phi_2
 
-def lgssm_wb(U_1, risk_tolerance, concavityFlag=False, timeFlag=False, verbose=True):
+def wb(U_1, risk_tolerance, concavityFlag=False, timeFlag=False, verbose=True):
     ev_bounds = np.stack(([x * (1+risk_tolerance) for x in evidence], [x * (1-risk_tolerance) for x in evidence]))
 
     # build LG-SSM based off of evidence
@@ -202,7 +202,7 @@ def lgssm_wb(U_1, risk_tolerance, concavityFlag=False, timeFlag=False, verbose=T
     return obj_val, solution, phi_1, phi_2
 
 phi_1opt, phi_2opt = 26431474.87572283, 29.634639300644544
-def lgssm_saa(U_1, numSamples, risk_tolerance,  concavityFlag=False, timeFlag=False, verbose=True):
+def saa(U_1, numSamples, risk_tolerance,  concavityFlag=False, timeFlag=False, verbose=True):
     ev_bounds = np.stack(([x * (1+risk_tolerance) for x in evidence], [x * (1-risk_tolerance) for x in evidence]))
     #phi_1opt, phi_2opt = saa_phi_opt_est(risk_tolerance=risk_tolerance)
 
@@ -257,10 +257,9 @@ def lgssm_saa(U_1, numSamples, risk_tolerance,  concavityFlag=False, timeFlag=Fa
             print(tabulate([["Time Elapsed (s)", end_time - start_time]]))
 
     return obj_val, solution, phi_1, phi_2
-    
 
-
-
+def sgd(U_1, PsiMultiplier, mu_notMultiplier, KAPPA, nu, method, LEARN_RATE, epsilon, concavityFlag=False, timeFlag=False, verbose=True, seed=42):
+    raise(Exception)
 
 def saa_phi_opt_est(J=1000, risk_tolerance = 0.1):
     cov_samples = []

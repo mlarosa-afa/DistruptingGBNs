@@ -63,7 +63,7 @@ def gen_joint_distributions(cov_samples_evidence, mu_samples_evidence, beta_samp
         joint_mu.append(mu)
     return joint_cov, joint_mu
 
-def loan_baseline(U_1, concavityFlag=False, timeFlag=False, verbose=True):
+def baseline(U_1, concavityFlag=False, timeFlag=False, verbose=True):
     start_time = time.time()
     cov, mu = gen_joint_distributions([MVG_Sigma_evidence], [MVG_mu_evidence], [mu_not_beta], [21.66903])
     MVG_Sigma = cov[0]
@@ -91,7 +91,7 @@ def loan_baseline(U_1, concavityFlag=False, timeFlag=False, verbose=True):
     
     return obj_value, phi_1, phi_2
 
-def loan_random(U_1, concavityFlag=False, timeFlag=False, verbose=True, seed=2023):
+def inst_random(U_1, concavityFlag=False, timeFlag=False, verbose=True, seed=2023):
     np.random.seed(seed)
     random.seed(seed)
 
@@ -127,7 +127,7 @@ def loan_random(U_1, concavityFlag=False, timeFlag=False, verbose=True, seed=202
     
     return obj_val, solution, phi_1, phi_2
 
-def loan_wb(U_1, concavityFlag=False, timeFlag=False, verbose=True):
+def wb(U_1, concavityFlag=False, timeFlag=False, verbose=True):
 
     start_time = time.time()
     joint_cov, joint_mu = gen_joint_distributions([MVG_Sigma_evidence], [MVG_mu_evidence], [mu_not_beta], [21.66903])
@@ -161,7 +161,7 @@ def loan_wb(U_1, concavityFlag=False, timeFlag=False, verbose=True):
     return obj_val, solution, phi_1, phi_2
 
 phi_1opt, phi_2opt = -26792.678576447775, 1005.4561732538641
-def loan_saa(U_1, numSamples, PsiMultiplier, mu_notMultiplier, KAPPA, nu, concavityFlag=False, timeFlag=False, verbose=True, seed=2023):
+def saa(U_1, numSamples, PsiMultiplier, mu_notMultiplier, KAPPA, nu, concavityFlag=False, timeFlag=False, verbose=True, seed=2023):
     np.random.seed(seed)
     random.seed(seed)
 
@@ -242,6 +242,10 @@ def loan_saa(U_1, numSamples, PsiMultiplier, mu_notMultiplier, KAPPA, nu, concav
             print(tabulate([["Time Elapsed (s)", end_time - start_time]]))
 
     return obj_val, solution, phi_1, phi_2
+
+def sgd(U_1, PsiMultiplier, mu_notMultiplier, KAPPA, nu, method, LEARN_RATE, epsilon, concavityFlag=False, timeFlag=False, verbose=True, seed=42):
+    raise(Exception)
+    
 
 def saa_phi_opt_est(PsiMultiplier, mu_notMultiplier, KAPPA, nu, J=1000):
     Psi = PsiMultiplier * MVG_Sigma_evidence

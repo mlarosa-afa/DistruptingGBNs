@@ -112,7 +112,7 @@ ev_vars = [0, 1, 2, 3, 5, 6, 8, 10, 11, 12, 14]
 evidence = [1.45885, 1.21453, 1.34413, 1.37732, .94179, 1.53126, .83859, .76678, .67944, .85680, .53759]
 ev_bounds = np.stack(([x + .15 for x in evidence], [x - .15 for x in evidence]))
 
-def zillow_baseline(U_1, concavityFlag=False, timeFlag=False, verbose=True):
+def baseline(U_1, concavityFlag=False, timeFlag=False, verbose=True):
     start_time = time.time()
     obj_value, phi_1, phi_2 = evaluate_objective(MVG_Sigma, MVG_mu, ev_vars, evidence, evidence, U_1, ev_bounds=ev_bounds)
     end_time = time.time()
@@ -137,7 +137,7 @@ def zillow_baseline(U_1, concavityFlag=False, timeFlag=False, verbose=True):
     
     return obj_value, phi_1, phi_2
 
-def zillow_random(U_1, concavityFlag=False, timeFlag=False, verbose=True, seed=2023):
+def inst_random(U_1, concavityFlag=False, timeFlag=False, verbose=True, seed=2023):
     np.random.seed(seed)
     random.seed(seed)
 
@@ -170,7 +170,7 @@ def zillow_random(U_1, concavityFlag=False, timeFlag=False, verbose=True, seed=2
     
     return obj_val, solution, phi_1, phi_2
 
-def zillow_wb(U_1, concavityFlag=False, timeFlag=False, verbose=True):
+def wb(U_1, concavityFlag=False, timeFlag=False, verbose=True):
 
     start_time = time.time()
     obj_val, solution, phi_1, phi_2 = whitebox_attack(MVG_Sigma, MVG_mu, ev_vars, evidence, U_1, ev_bounds=ev_bounds)
@@ -200,7 +200,7 @@ def zillow_wb(U_1, concavityFlag=False, timeFlag=False, verbose=True):
     return obj_val, solution, phi_1, phi_2
 
 phi_1opt, phi_2opt = -241747.29447119022, 32906.527971408235
-def zillow_saa(U_1, numSamples, PsiMultiplier, mu_notMultiplier, KAPPA, nu, concavityFlag=False, timeFlag=False, verbose=True, seed=14):
+def saa(U_1, numSamples, PsiMultiplier, mu_notMultiplier, KAPPA, nu, concavityFlag=False, timeFlag=False, verbose=True, seed=14):
     np.random.seed(seed)
     random.seed(seed)
 
@@ -257,7 +257,7 @@ def zillow_saa(U_1, numSamples, PsiMultiplier, mu_notMultiplier, KAPPA, nu, conc
     return obj_val, solution, phi_1, phi_2
 
 
-def zillow_sgd(U_1, PsiMultiplier, mu_notMultiplier, KAPPA, nu, method, LEARN_RATE, epsilon, concavityFlag=False, timeFlag=False, verbose=True, seed=42):
+def sgd(U_1, PsiMultiplier, mu_notMultiplier, KAPPA, nu, method, LEARN_RATE, epsilon, concavityFlag=False, timeFlag=False, verbose=True, seed=42):
     Psi = PsiMultiplier * MVG_Sigma
     mu_not = mu_notMultiplier * MVG_mu
 
