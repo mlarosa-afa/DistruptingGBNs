@@ -28,7 +28,7 @@ DESCRIPTION
            Additional required parameters based on method. 
             1. white-box -- u_1
             2. grey-box-SAA--u_1, numsamples, Psi coefficent, mu_not coefficent, Kappa, nu
-            3. grey-box-SGA--u_1, method, Psi coefficent, mu coefficent, Kappa, nu, learn rate, epsilon
+            3. grey-box-SGA--u_1, method, Psi coefficent, mu coefficent, Kappa, nu, learning rate, epsilon
                 method options: 1.AdaGrad 2.RMSProp 3.Adam
     
 OPTIONS

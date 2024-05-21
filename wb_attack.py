@@ -1,11 +1,10 @@
 import numpy as np
 from functions import identify_convavity, vals_from_priors, solve_optimal_weights, solveqm
 
-
-def whitebox_attack(MVG_Sigma, MVG_mu, ev_cols, evidence, U_1, U_2, ev_bounds=None, risk_tolerance=.1,
+def whitebox_attack(MVG_Sigma, MVG_mu, ev_cols, true_evidence, U_1, U_2, ev_bounds=None, risk_tolerance=.1,
                     optimality_target=3):
     """
-        Executes Sample Average Approximation Attack
+        Executes whitebox attack
 
         Parameter
         ---------
@@ -15,7 +14,7 @@ def whitebox_attack(MVG_Sigma, MVG_mu, ev_cols, evidence, U_1, U_2, ev_bounds=No
             Mean of model
         ev_cols : array
             array specifying the index column/row of evidence variables. Must have same dimension as evidence.
-        evidence : array
+        true_evidence : array
             array specifying the true observed values of ev_cols. Must have same dimension as ev_cols.
         U_1 : float
             unnormalized weight for KL Divergence. For interpretability, U_1 and U_2 should add to 1.
@@ -49,9 +48,9 @@ def whitebox_attack(MVG_Sigma, MVG_mu, ev_cols, evidence, U_1, U_2, ev_bounds=No
 
     # Compute evidence range
     if ev_bounds is None:
-        ev_bounds = np.stack(([x * (1+risk_tolerance) for x in evidence], [x * (1-risk_tolerance) for x in evidence]))
+        ev_bounds = np.stack(([x * (1+risk_tolerance) for x in true_evidence], [x * (1-risk_tolerance) for x in true_evidence]))
 
-    v = vals_from_priors(MVG_Sigma, MVG_mu, ev_cols, evidence)
+    v = vals_from_priors(MVG_Sigma, MVG_mu, ev_cols, true_evidence)
 
     phi_opt1, phi_opt2 = solve_optimal_weights(v.Q, v.vT, v.K_prime, v.u_prime, len(ev_cols), ev_bounds=ev_bounds)
 
@@ -72,12 +71,12 @@ def whitebox_attack(MVG_Sigma, MVG_mu, ev_cols, evidence, U_1, U_2, ev_bounds=No
 
     obj_value, solution = solveqm(Dmat, Dvec, len(ev_cols), ev_bounds=ev_bounds, optimality_target=optimality_target)
 
-    evidence = np.array([])
+    proposed_evidence = np.array([])
     for i in range(len(ev_cols)):
-        evidence = np.append(evidence, solution["Z_DV_" + str(i)])
+        proposed_evidence = np.append(proposed_evidence, solution["Z_DV_" + str(i)])
 
-    phi_1 = np.transpose(evidence)@(W_1 * v.Q)@evidence + np.transpose(evidence) @ v.vT
-    phi_2 = np.transpose(evidence)@(-1 * W_2 * v.K_prime) @ evidence + (np.transpose(evidence) @ (2 * W_2 * np.matmul(v.K_prime, v.u_prime)))
+    phi_1 = np.transpose(proposed_evidence)@(W_1 * v.Q)@proposed_evidence + np.transpose(proposed_evidence) @ v.vT
+    phi_2 = np.transpose(proposed_evidence)@(-1 * W_2 * v.K_prime) @ proposed_evidence + (np.transpose(proposed_evidence) @ (2 * W_2 * np.matmul(v.K_prime, v.u_prime)))
     phi_1 = phi_1 / APhi_opt1
     phi_2 = phi_2 / APhi_opt2
 

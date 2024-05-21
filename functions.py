@@ -2,6 +2,7 @@ import math
 import random
 import numpy as np
 from scipy.stats import invwishart
+import cplex
 from docplex.mp.model import Model
 
 #holds the subsets of Lambda

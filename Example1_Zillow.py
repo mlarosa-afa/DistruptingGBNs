@@ -112,6 +112,23 @@ evidence = [1.45885, 1.21453, 1.34413, 1.37732, .94179, 1.53126, .83859, .76678,
 ev_bounds = np.stack(([x + .15 for x in evidence], [x - .15 for x in evidence]))
 
 
+# z = z'
+def zillow_baseline_objective(concavityFlag=False, timeFlag=False):
+
+    start_time = time.time()
+    b_concave, b_convex, obj_val, solution, phi_1, phi_2 = whitebox_attack(MVG_Sigma, MVG_mu, ev_vars,
+                                                                                 evidence, U_1, U_2,
+                                                                                 ev_bounds=ev_bounds)
+    end_time = time.time()
+    print(U_1, U_2, solution["Z_DV_0"], solution["Z_DV_1"], solution["Z_DV_2"], solution["Z_DV_3"],
+          solution["Z_DV_4"], solution["Z_DV_5"], solution["Z_DV_6"], solution["Z_DV_7"],
+          solution["Z_DV_8"], solution["Z_DV_9"], solution["Z_DV_10"], obj_val, phi_1, phi_2, sep="\t")
+
+    if timeFlag == True:
+        print("Total time:\t", end_time - start_time)
+    if concavityFlag == True:
+        print("U_1-:", b_concave, "\tU_1+:", b_convex)
+
 def zillow_wb(U_1, concavityFlag=False, timeFlag=False):
     U_2 = 1 - U_1
 
