@@ -1,7 +1,15 @@
 import numpy as np
 from functions import identify_convavity, vals_from_priors, solve_optimal_weights, solveqm
+from baseline_analysis import evaluate_objective
 
-def whitebox_attack(MVG_Sigma, MVG_mu, ev_cols, true_evidence, U_1, U_2, ev_bounds=None, risk_tolerance=.1,
+def whitebox_evaluation(v, W_1, W_2, solution):
+    #Solve for Phi_1 which allows to backwards solve for Phi_2 sicne obj is known at this point
+    phi_1 = np.transpose(solution)@(W_1 * v.Q)@solution + np.transpose(solution) @ (W_1*v.vT)
+    phi_2 = np.transpose(solution)@(-1*W_2 * v.K_prime)@solution + (np.transpose(solution) @ (2*W_2*(v.K_prime@v.u_prime)))
+
+    return phi_1 + phi_2, phi_1, phi_2
+
+def whitebox_attack(MVG_Sigma, MVG_mu, ev_cols, true_evidence, U_1, ev_bounds=None, risk_tolerance=.1,
                     optimality_target=3):
     """
         Executes whitebox attack
@@ -18,8 +26,6 @@ def whitebox_attack(MVG_Sigma, MVG_mu, ev_cols, true_evidence, U_1, U_2, ev_boun
             array specifying the true observed values of ev_cols. Must have same dimension as ev_cols.
         U_1 : float
             unnormalized weight for KL Divergence. For interpretability, U_1 and U_2 should add to 1.
-        U_2 : float
-            unnormalized weight for log densities. For interpretability, U_1 and U_2 should add to 1.
         ev_bounds : 2D array
             2xn array where row 1 provides the maximum constraints for each evidence variable and row
             2 provided the minimum constraint for each evidence variable.
@@ -32,14 +38,10 @@ def whitebox_attack(MVG_Sigma, MVG_mu, ev_cols, true_evidence, U_1, U_2, ev_boun
 
         Returns
         ---------
-        b_concave : float
-            upper bound of U_1 that ensures any number below has a PSD quadratic term
-        b_convex : float
-            lower bound of U_1 that ensures any number above has a NSD quadratic term
         obj_value : float
             value of objection function at the proposed evidence
-        solution : docplex solution class
-            solution of posioned evidence values in "Z_DV_X" field where X is the evidence index
+        solution : array
+            solution of posioned evidence values in index of ev_cols
         Phi_1 : float
             solution for phi1 normalized
         Phi_2 : float
@@ -52,33 +54,21 @@ def whitebox_attack(MVG_Sigma, MVG_mu, ev_cols, true_evidence, U_1, U_2, ev_boun
 
     v = vals_from_priors(MVG_Sigma, MVG_mu, ev_cols, true_evidence)
 
+    #Calculate Normalized Weights
     phi_opt1, phi_opt2 = solve_optimal_weights(v.Q, v.vT, v.K_prime, v.u_prime, len(ev_cols), ev_bounds=ev_bounds)
+    W_1 = U_1 / abs(phi_opt1)
+    W_2 = (1-U_1) / abs(phi_opt2)
 
-    rho = np.sort(np.real(np.linalg.eigvals(v.Q)))[::-1]
-    #Zeta = np.sort(np.real(np.linalg.eigvals(v.L.zz)))[::-1]
-    invSigma_zz= np.linalg.inv(v.Sigma_zz)
-    Zeta = np.sort(np.real(np.linalg.eigvals(invSigma_zz)))[::-1]
-
-    b_concave, b_convex = identify_convavity(rho, phi_opt1, Zeta, phi_opt2, len(ev_cols))
-    APhi_opt1 = abs(phi_opt1)
-    APhi_opt2 = abs(phi_opt2)
-    # Solve normalized problem
-    W_1 = U_1 / APhi_opt1
-    W_2 = U_2 / APhi_opt2
-
+    #Find optimal attack
     Dmat = (W_1 * v.Q) - (W_2 * v.K_prime)
     Dvec = W_1 * np.transpose(v.vT) + 2 * W_2 * np.matmul(v.K_prime, v.u_prime)
-
     obj_value, solution = solveqm(Dmat, Dvec, len(ev_cols), ev_bounds=ev_bounds, optimality_target=optimality_target)
 
+    #change objective
     proposed_evidence = np.array([])
     for i in range(len(ev_cols)):
         proposed_evidence = np.append(proposed_evidence, solution["Z_DV_" + str(i)])
 
-    phi_1 = np.transpose(proposed_evidence)@(W_1 * v.Q)@proposed_evidence + np.transpose(proposed_evidence) @ v.vT
-    phi_2 = np.transpose(proposed_evidence)@(-1 * W_2 * v.K_prime) @ proposed_evidence + (np.transpose(proposed_evidence) @ (2 * W_2 * np.matmul(v.K_prime, v.u_prime)))
-    phi_1 = phi_1 / APhi_opt1
-    phi_2 = phi_2 / APhi_opt2
+    _, phi_1, phi_2 = whitebox_evaluation(v, W_1, W_2, proposed_evidence)
 
-
-    return b_concave, b_convex, obj_value, solution, phi_1, phi_2
+    return obj_value, proposed_evidence, phi_1, phi_2

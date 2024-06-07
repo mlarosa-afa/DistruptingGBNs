@@ -59,7 +59,7 @@ pareto = False
 
 for opt, arg in opts:
     if opt == "-v" or opt == "--version":
-        print("0.1.0")
+        print("0.2.0")
         quit(1)
     if opt == "-h" or opt == "--help":
         print(help)
@@ -79,17 +79,17 @@ if args[0] in ['Zillow', 'Loan', 'LGSSM']:
 else:
     raise Exception("exampleNum argument passed with invalid option. Valid options: 'Zillow', 'Loan', and 'LGSSM'")
 
-if args[1] in ["white-box", "grey-box-SAA", "grey-box-SGA"]:
+if args[1] in ["white-box", "grey-box-SAA", "grey-box-SGA", 'baseline', 'random']:
     method = args[1]
 else:
     raise Exception(
-        "method argument passed with invalid option. Valid options: 'white-box', 'grey-box-SAA', and 'grey-box-SGA'")
+        "method argument passed with invalid option. Valid options: 'white-box', 'grey-box-SAA', 'grey-box-SGA', 'baseline', and 'random'.")
 
 #Ensures all parameters passed
-if example == "LGSSM" and method == "white-box" and not (len(args) == 4):
+if example == "LGSSM" and method in ["white-box", "random", "baseline"] and not (len(args) == 4):
     raise Exception(
         "Arguments passed to 'white-box' for 'LGSSM' are incorrect. Must include only: u_1, risk_tolerance")
-elif not(example=="LGSSM") and method == "white-box" and not (len(args) == 3):
+elif not(example=="LGSSM") and method in ["white-box", "random", "baseline"] and not (len(args) == 3):
     raise Exception(
         "Arguments passed to 'white-box' are incorrect. Must include only: u_1")
 elif example == "LGSSM" and method == "grey-box-SAA" and not(len(args) == 5):
@@ -112,41 +112,40 @@ if pareto:
     quit(1)
 
 if example == 'Zillow':
-    print("SOLUTION:")
-    if method == "white-box":
-        print("U_1\tU_2\tZ_0\tZ_1\tZ_2\tZ_3\tZ_4\tZ_5\tZ_6\tZ_7\tZ_8\tZ_9\tZ_10\tobj_val\tphi_opt1\tphi_opt2")
-        ex1.zillow_wb(args[0], concavityFlag=concavity, timeFlag=time)
+    if method == 'baseline':
+        ex1.baseline(args[0], concavityFlag=concavity, timeFlag=time)
+    elif method == 'random':
+        ex1.inst_random(args[0], concavityFlag=concavity, timeFlag=time)
+    elif method == "white-box":
+        ex1.wb(args[0], concavityFlag=concavity, timeFlag=time)
     elif method == "grey-box-SAA":
-        print("U_1\tU_2\tZ_0\tZ_1\tZ_2\tZ_3\tZ_4\tZ_5\tZ_6\tZ_7\tZ_8\tZ_9\tZ_10\tobj_val\tphi_opt1\tphi_opt2")
-        ex1.zillow_saa(args[0], int(args[1]), args[2], args[3], args[4], args[5], timeFlag=time)
+        ex1.saa(args[0], int(args[1]), args[2], args[3], args[4], args[5], concavityFlag=concavity, timeFlag=time)
     elif method == "grey-box-SGA":
-        print("U_1\tU_2\tZ_0\tZ_1\tZ_2\tZ_3\tZ_4\tZ_5\tZ_6\tZ_7\tZ_8\tZ_9\tZ_10\tobj_val")
-        ex1.zillow_sgd(args[0], args[2], args[3], args[4], args[5], int(args[1]), args[6], args[7], timeFlag=time)
+        ex1.sgd(args[0], args[2], args[3], args[4], args[5], int(args[1]), args[6], args[7], concavityFlag=concavity, timeFlag=time)
+    
 
 if example == 'Loan':
-    if method == "white-box":
-        print("SOLUTION:")
-        print("U_1\tU_2\tZ_0\tZ_1\tZ_2\tZ_3\tZ_4\tZ_5\tZ_6\tobj_val\tphi_opt1\tphi_opt2")
-        ex2.loan_wb(args[0], concavityFlag=concavity, timeFlag=time)
+    if method == 'baseline':
+        ex2.baseline(args[0], concavityFlag=concavity, timeFlag=time)
+    elif method == 'random':
+        ex2.inst_random(args[0], concavityFlag=concavity, timeFlag=time)
+    elif method == "white-box":
+        ex2.wb(args[0], concavityFlag=concavity, timeFlag=time)
     elif method == "grey-box-SAA":
-        print("SOLUTION:")
-        print("U_1\tU_2\tZ_0\tZ_1\tZ_2\tZ_3\tZ_4\tZ_5\tZ_6\tobj_val\tphi_opt1\tphi_opt2")
-        ex2.loan_saa(args[0], int(args[1]), args[2], args[3], args[4], args[5], timeFlag=time)
+        ex2.saa(args[0], int(args[1]), args[2], args[3], args[4], args[5], concavityFlag=concavity, timeFlag=time)
     elif method == "grey-box-SGA":
-        print("This method is currently unavailable for Loan data set.")
+        print("This method is currently unavailable for Loan dataset.")
         quit(1)
 
 if example == 'LGSSM':
-    if method == "white-box":
-        print("SOLUTION:")
-        print("U_1\tU_2\tZ_0\tZ_1\tZ_2\tZ_3\tZ_4\tZ_5\tZ_6\tZ_7\tZ_8\tZ_9\tZ_10"
-              "\tZ_11\tZ_12\tZ_13\tZ_14\tZ_15\tZ_16\tZ_17\tZ_18\tZ_19\tZ_20\tobj_val\tphi_opt1\tphi_opt2")
-        ex3.lgssm_wb(args[0], args[1], concavityFlag=concavity, timeFlag=time)
+    if method == 'baseline':
+        ex3.baseline(args[0], args[1], concavityFlag=concavity, timeFlag=time)
+    elif method == 'random':
+        ex3.inst_random(args[0], args[1], concavityFlag=concavity, timeFlag=time)
+    elif method == "white-box":
+        ex3.wb(args[0], args[1], concavityFlag=concavity, timeFlag=time)
     elif method == "grey-box-SAA":
-        print("SOLUTION:")
-        print("U_1\tU_2\tZ_0\tZ_1\tZ_2\tZ_3\tZ_4\tZ_5\tZ_6\tZ_7\tZ_8\tZ_9\tZ_10"
-              "\tZ_11\tZ_12\tZ_13\tZ_14\tZ_15\tZ_16\tZ_17\tZ_18\tZ_19\tZ_20\tobj_val\tphi_opt1\tphi_opt2")
-        ex3.lgssm_saa(args[0], int(args[1]), args[2],  timeFlag=time)
+        ex3.saa(args[0], int(args[1]), args[2], concavityFlag=concavity, timeFlag=time)
     elif method == "grey-box-SGA":
-        print("This method is currently unavailable for LGSSM data set.")
+        print("This method is currently unavailable for LGSSM dataset.")
         quit(1)

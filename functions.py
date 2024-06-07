@@ -131,3 +131,90 @@ def identify_convavity(rho, Phi_1_opt, Zeta, Phi_2_opt, NUM_EVIDENCE_VARS):
             b_concave = np.real(b_concave)
             b_convex = np.real(b_convex)
     return b_concave, b_convex
+
+
+def convavity_from_conanical(MVG_Sigma, MVG_mu, ev_cols, true_evidence, ev_bounds=None, risk_tolerance=.1):
+    """
+        Executes Sample Average Approximation Attack
+
+        Parameter
+        ---------
+        MVG_Sigma : array
+            Covariance matrix of model
+        MVG_Mu : array
+            Mean of model
+        ev_cols : array
+            array specifying the index column/row of evidence variables. Must have same dimension as evidence.
+        true_evidence : array
+            array specifying the true observed values of ev_cols. Must have same dimension as ev_cols. Denoted as z' in the paper.
+        ev_bounds : 2D array
+            2xn array where row 1 provides the maximum constraints for each evidence variable and row
+            2 provided the minimum constraint for each evidence variable.
+            Row 1 MUST be > Row 2 for all entries. If no bounds are provided, +- 10% deviation is assumed.
+        risk_tolerance : float
+            if ev_bounds is not provided, risk_tolerance modifies the default +- 10% deviation to specified value.
+
+        Returns
+        ---------
+        b_concave : float
+            upper bound of U_1 that ensures any number below has a PSD quadratic term
+        b_convex : float
+            lower bound of U_1 that ensures any number above has a NSD quadratic term
+    """
+    #Calculate bounds if non given
+    if ev_bounds is None:
+        ev_bounds = np.stack(([x * (1+risk_tolerance) for x in true_evidence], [x * (1-risk_tolerance) for x in true_evidence]))
+
+    #Switch Forms
+    v = vals_from_priors(MVG_Sigma, MVG_mu, ev_cols, true_evidence)
+
+    #Calculate optimal Phis
+    phi_opt1, phi_opt2 = solve_optimal_weights(v.Q, v.vT, v.K_prime, v.u_prime, len(ev_cols), ev_bounds=ev_bounds)
+
+    #Use Weyls to solve for concavity
+    rho = np.sort(np.real(np.linalg.eigvals(v.Q)))[::-1]
+    invSigma_zz= np.linalg.inv(v.Sigma_zz)
+    Zeta = np.sort(np.real(np.linalg.eigvals(invSigma_zz)))[::-1]
+
+    return identify_convavity(rho, phi_opt1, Zeta, phi_opt2, len(ev_cols))
+    
+
+def KL_divergence(MVG_Sigma, MVG_mu, ev_vars, true_evidence, proposed_evidence):
+
+    unobserved_vars = list(set(list(range(len(MVG_mu)))) - set(ev_vars))
+
+    Sigma_zz = MVG_Sigma[ev_vars][:,ev_vars]
+    Sigma_yy = MVG_Sigma[unobserved_vars][:,unobserved_vars]
+    Sigma_yz = MVG_Sigma[unobserved_vars][:,ev_vars]
+
+    mu_y = MVG_mu[unobserved_vars]
+    mu_z = MVG_mu[ev_vars]
+
+    Sigma_zz_inv = np.linalg.inv(Sigma_zz)
+
+    true_cond_mu = mu_y + Sigma_yz@Sigma_zz_inv@(true_evidence-mu_z)
+    poisioned_cond_mu = mu_y + Sigma_yz@Sigma_zz_inv@(proposed_evidence-mu_z)
+
+    KL = 0.5 * np.transpose(true_cond_mu - poisioned_cond_mu) @ np.linalg.inv(Sigma_yy) @ (true_cond_mu - poisioned_cond_mu)
+
+    return KL
+
+
+def point_estimates_means(MVG_Sigma, MVG_mu, ev_vars, evidence):
+
+    unobserved_vars = list(set(list(range(len(MVG_mu)))) - set(ev_vars))
+
+    Sigma_zz = MVG_Sigma[ev_vars][:,ev_vars]
+    Sigma_yz = MVG_Sigma[unobserved_vars][:,ev_vars]
+    Sigma_yy = MVG_Sigma[unobserved_vars][:,unobserved_vars]
+
+    mu_y = MVG_mu[unobserved_vars]
+    mu_z = MVG_mu[ev_vars]
+
+    Sigma_zz_inv = np.linalg.inv(Sigma_zz)
+
+    cond_mu = mu_y + Sigma_yz@Sigma_zz_inv@(evidence-mu_z)
+    cond_Sigma = Sigma_yy - Sigma_yz @ Sigma_zz_inv @ np.transpose(Sigma_yz)
+    
+    return cond_mu, np.sqrt(np.diag(cond_Sigma))
+    

@@ -1,0 +1,21 @@
+Solution: Zillow Baseline Analysis
+   Parameterized under U_1 = 0.5, U_2 = 0.5
+
+Evidence Analytics
+---------------  ---------
+Objective Value  -0.427217
+---------------  ---------
+
+Estimates of Unobserved Means
+Variable      Point Estimates    Standard Deviation
+----------  -----------------  --------------------
+Y_0                  0.981041            0.0156155
+Y_1                  0.457505            0.00969528
+Y_2                  1.092               0.00798529
+Y_3                  0.412574            0.0094026
+
+Concavity Analytics
+----  -----------
+U_1-  3.74794e-05
+U_1+  1
+----  -----------

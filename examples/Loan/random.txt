@@ -1,0 +1,35 @@
+Solution: Loan Random Analysis
+   Parameterized under U_1 = 0.5, U_2 = 0.5
+
+Poisioned Attack
+Evidence      Posioned Value
+----------  ----------------
+Z_0                   92.107
+Z_1                   16.31
+Z_2                   36.101
+Z_3                   11.499
+Z_4                   69.789
+Z_5                   28.911
+Z_6                  100.331
+
+Attack Analytics
+---------------  ----------
+Objective Value  -0.0114857
+Phi_1            -0.503275
+Phi_2             0.49179
+---------------  ----------
+
+KL Divergence from True Evidence
+--  ----------
+KL  0.00472821
+--  ----------
+
+Estimates of Unobserved Means
+Variable      Point Estimates    Standard Deviation
+----------  -----------------  --------------------
+Y_0                   12.2442                 4.655
+
+Time Analytics
+----------------  ---------
+Time Elapsed (s)  0.0320463
+----------------  ---------

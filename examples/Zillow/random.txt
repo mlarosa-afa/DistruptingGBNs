@@ -1,0 +1,42 @@
+Solution: Zillow Random Analysis
+   Parameterized under U_1 = 0.5, U_2 = 0.5
+
+Poisioned Attack
+Evidence      Posioned Value
+----------  ----------------
+Z_0                    1.494
+Z_1                    1.073
+Z_2                    1.241
+Z_3                    1.431
+Z_4                    0.92
+Z_5                    1.58
+Z_6                    0.959
+Z_7                    0.88
+Z_8                    0.738
+Z_9                    0.798
+Z_10                   0.472
+
+Attack Analytics
+---------------  ---------
+Objective Value  -0.233741
+Phi_1            -0.654261
+Phi_2             0.42052
+---------------  ---------
+
+KL Divergence from True Evidence
+--  -------
+KL  108.998
+--  -------
+
+Estimates of Unobserved Means
+Variable      Point Estimates    Standard Deviation
+----------  -----------------  --------------------
+Y_0                  0.877173            0.0156155
+Y_1                  0.66511             0.00969528
+Y_2                  0.901706            0.00798529
+Y_3                  0.480715            0.0094026
+
+Time Analytics
+----------------  ---------
+Time Elapsed (s)  0.0689123
+----------------  ---------
